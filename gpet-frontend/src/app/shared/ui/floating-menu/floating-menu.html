@@ -1,0 +1,53 @@
+<nav class="floating-menu" aria-label="Menu principal">
+  <a class="floating-menu__brand" routerLink="/" [attr.aria-label]="brandLabel()">
+    <img [ngSrc]="iconSrc()" width="64" height="64" alt="" priority />
+  </a>
+
+  <button
+    type="button"
+    class="floating-menu__toggle"
+    aria-controls="floating-menu-list"
+    [attr.aria-expanded]="mobileOpen()"
+    (click)="toggleMobile()"
+  >
+    <span class="sr-only">Abrir menu</span>
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <ul id="floating-menu-list" class="floating-menu__list" [class.floating-menu__list--open]="mobileOpen()">
+    @for (item of items(); track item.route; let i = $index) {
+      <li
+        class="floating-menu__item"
+        (mouseenter)="open(i)"
+        (mouseleave)="close()"
+        (focusout)="close()"
+      >
+        @if (item.children?.length) {
+          <button
+            type="button"
+            class="floating-menu__link"
+            [attr.aria-expanded]="openIndex() === i"
+            [attr.aria-controls]="'submenu-' + i"
+            (click)="toggle(i)"
+            (focusin)="open(i)"
+          >
+            {{ item.label }}
+            <span aria-hidden="true" class="floating-menu__caret">{{ openIndex() === i ? '▾' : '▴' }}</span>
+          </button>
+          <app-submenu [items]="item.children!" [open]="openIndex() === i" [submenuId]="'submenu-' + i" />
+        } @else {
+          <a
+            class="floating-menu__link"
+            [routerLink]="item.route"
+            routerLinkActive="floating-menu__link--active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+          >
+            {{ item.label }}
+          </a>
+        }
+      </li>
+    }
+  </ul>
+</nav>
+
