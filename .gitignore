@@ -4,3 +4,4 @@
 .agents/
 .opencode/
 .kimi-code/
+node_modules/
