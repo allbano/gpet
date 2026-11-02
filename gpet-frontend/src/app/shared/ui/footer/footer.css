@@ -1,0 +1,39 @@
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.footer__institution {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.footer__address {
+  font-style: normal;
+  color: #d1d5db;
+}
+
+.footer__logos {
+  display: flex;
+  gap: 1rem;
+}
+
+.footer__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5rem;
+  height: 3rem;
+  padding: 0 0.75rem;
+  border: 1px solid #6b7280;
+  border-radius: 0.5rem;
+  font-weight: 700;
+}
+
