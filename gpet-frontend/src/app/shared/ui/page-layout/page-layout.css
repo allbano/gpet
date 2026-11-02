@@ -1,0 +1,14 @@
+.page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 1200px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page-layout__content {
+  flex: 1;
+}
+
