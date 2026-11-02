@@ -1,0 +1,8 @@
+<figure class="group-photo">
+  @if (src(); as photo) {
+    <img class="group-photo__img" [ngSrc]="photo" fill [alt]="alt()" />
+  } @else {
+    <div class="group-photo__placeholder" role="img" [attr.aria-label]="alt()">Foto do grupo</div>
+  }
+</figure>
+
