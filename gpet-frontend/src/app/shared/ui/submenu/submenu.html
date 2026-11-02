@@ -1,0 +1,10 @@
+<ul class="submenu" [id]="submenuId()" [class.submenu--open]="open()">
+  @for (item of items(); track item.route) {
+    <li>
+      <a class="submenu__link" [routerLink]="item.route" routerLinkActive="submenu__link--active">
+        {{ item.label }}
+      </a>
+    </li>
+  }
+</ul>
+

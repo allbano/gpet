@@ -1,0 +1,44 @@
+.submenu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 12rem;
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 20;
+}
+
+.submenu--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.submenu__link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: #1f2937;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.submenu__link:hover,
+.submenu__link:focus-visible {
+  background: #f3f4f6;
+  outline: none;
+}
+
+.submenu__link--active {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
