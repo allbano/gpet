@@ -9,11 +9,12 @@ repositories {
     mavenLocal()
 }
 
-val quarkusPlatformGroupId: String by project
-val quarkusPlatformArtifactId: String by project
-val quarkusPlatformVersion: String by project
+val quarkusPlatformGroupId = providers.gradleProperty("quarkusPlatformGroupId").get()
+val quarkusPlatformArtifactId = providers.gradleProperty("quarkusPlatformArtifactId").get()
+val quarkusPlatformVersion = providers.gradleProperty("quarkusPlatformVersion").get()
 
 dependencies {
+    implementation("io.quarkiverse.jooq:quarkus-jooq:2.2.0")
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
     implementation("io.quarkus:quarkus-rest-jackson")
     implementation("io.quarkus:quarkus-kotlin")

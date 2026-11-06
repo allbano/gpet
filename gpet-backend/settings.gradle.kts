@@ -1,13 +1,13 @@
 pluginManagement {
-    val quarkusPluginVersion: String by settings
-    val quarkusPluginId: String by settings
+    val quarkusPluginVersion = providers.gradleProperty("quarkusPluginVersion")
+    val quarkusPluginId = providers.gradleProperty("quarkusPluginId")
     repositories {
         mavenCentral()
         gradlePluginPortal()
         mavenLocal()
     }
     plugins {
-        id(quarkusPluginId) version quarkusPluginVersion
+        id(quarkusPluginId.get()) version quarkusPluginVersion.get()
     }
 }
 rootProject.name="gpet-backend"
