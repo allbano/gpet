@@ -5,3 +5,7 @@
 .opencode/
 .kimi-code/
 node_modules/
+# Quarkus CLI local artifacts
+.quarkus/
+# Gradle CLI local artifacts
+.gradle/
