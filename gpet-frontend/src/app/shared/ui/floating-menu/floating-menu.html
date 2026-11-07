@@ -14,27 +14,45 @@
     <span aria-hidden="true">☰</span>
   </button>
 
-  <ul id="floating-menu-list" class="floating-menu__list" [class.floating-menu__list--open]="mobileOpen()">
+  <ul
+    id="floating-menu-list"
+    class="floating-menu__list"
+    [class.floating-menu__list--open]="mobileOpen()"
+  >
     @for (item of items(); track item.route; let i = $index) {
       <li
         class="floating-menu__item"
         (mouseenter)="open(i)"
         (mouseleave)="close()"
-        (focusout)="close()"
+        (focusout)="sairDoItem($event)"
       >
         @if (item.children?.length) {
+          <a
+            class="floating-menu__link"
+            [routerLink]="item.route"
+            routerLinkActive="floating-menu__link--active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+            >{{ item.label }}</a
+          >
           <button
             type="button"
-            class="floating-menu__link"
+            class="floating-menu__link floating-menu__submenu-toggle"
+            [attr.aria-label]="'Abrir submenu de ' + item.label"
             [attr.aria-expanded]="openIndex() === i"
             [attr.aria-controls]="'submenu-' + i"
             (click)="toggle(i)"
-            (focusin)="open(i)"
+            (keydown.arrowdown)="abrirComTeclado($event, i)"
           >
-            {{ item.label }}
-            <span aria-hidden="true" class="floating-menu__caret">{{ openIndex() === i ? '▾' : '▴' }}</span>
+            <span aria-hidden="true" class="floating-menu__caret">{{
+              openIndex() === i ? '▾' : '▴'
+            }}</span>
           </button>
-          <app-submenu [items]="item.children!" [open]="openIndex() === i" [submenuId]="'submenu-' + i" />
+          <app-submenu
+            [items]="item.children!"
+            [open]="openIndex() === i"
+            [submenuId]="'submenu-' + i"
+          />
         } @else {
           <a
             class="floating-menu__link"
@@ -50,4 +68,3 @@
     }
   </ul>
 </nav>
-

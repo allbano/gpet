@@ -115,3 +115,18 @@
   }
 }
 
+.floating-menu__item {
+  display: flex;
+  align-items: center;
+}
+.floating-menu__item:has(.floating-menu__submenu-toggle) > a {
+  padding-right: 0.2rem;
+}
+.floating-menu__submenu-toggle {
+  padding-left: 0.4rem;
+  padding-right: 0.6rem;
+  min-height: 44px;
+}
+.floating-menu__toggle {
+  color: #1f2937;
+}

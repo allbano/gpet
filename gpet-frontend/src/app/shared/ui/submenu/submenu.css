@@ -1,6 +1,6 @@
 .submenu {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: 100%;
   left: 0;
   min-width: 12rem;
   margin: 0;
@@ -12,7 +12,9 @@
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
   z-index: 20;
 }
 
@@ -34,11 +36,10 @@
 .submenu__link:hover,
 .submenu__link:focus-visible {
   background: #f3f4f6;
-  outline: none;
+  outline: 2px solid #9a4900;
 }
 
 .submenu__link--active {
   color: #b91c1c;
   font-weight: 600;
 }
-
