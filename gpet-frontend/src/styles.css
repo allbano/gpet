@@ -1,3 +1,126 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+body {
+  margin: 0;
+  color: #172f35;
+  background: #f8faf9;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+h1 {
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  font-weight: 700;
+  margin-block: 1.2rem;
+}
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-block: 1rem;
+}
+h3 {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+p {
+  margin-block: 0.6rem;
+}
+a {
+  color: #165a63;
+  text-underline-offset: 0.2em;
+  text-decoration: underline;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin-top: 0.8rem;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  background: white;
+  color: #172f35;
+  padding: 0.65rem;
+  border: 1px solid #5c7478;
+  border-radius: 0.3rem;
+  font: inherit;
+}
+button {
+  color: white;
+  background: #175b58;
+  border: 1px solid #175b58;
+  padding: 0.65rem 1rem;
+  border-radius: 0.3rem;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: #10413f;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+button.secundario {
+  color: #174e4c;
+  background: white;
+}
+:focus-visible {
+  outline: 3px solid #9a4900;
+  outline-offset: 3px;
+}
+.painel {
+  padding: clamp(1rem, 3vw, 2rem);
+  background: white;
+  border: 1px solid #cad8d5;
+  border-radius: 0.6rem;
+  margin-block: 1.2rem;
+}
+.estreito {
+  max-width: 32rem;
+  margin-inline: auto;
+}
+.acoes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.grade-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.erro {
+  color: #8b1c1c;
+  padding: 1rem;
+  background: #fff1f1;
+  border-left: 4px solid #8b1c1c;
+}
+.lista-registros {
+  list-style: none;
+  padding: 0;
+  margin-block: 1.5rem;
+}
+.lista-registros > li {
+  padding: 1rem;
+  border-bottom: 1px solid #cad8d5;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.check input {
+  width: auto;
+}
+small {
+  display: block;
+}

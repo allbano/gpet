@@ -1,0 +1,18 @@
+<app-page-layout>
+  <header class="admin-header">
+    <h1>Administração GPET</h1>
+    <p>{{ auth.sessao()?.usuario?.nome }}</p>
+  </header>
+  <nav class="acoes" aria-label="Administração">
+    <a routerLink="/admin/atividades" routerLinkActive="selecionado">Atividades</a>
+    <a routerLink="/admin/categorias" routerLinkActive="selecionado">Categorias</a>
+    <a routerLink="/admin/formatos" routerLinkActive="selecionado">Formatos</a>
+    <a routerLink="/admin/usuarios" routerLinkActive="selecionado">Usuários</a>
+    <a routerLink="/trocar-senha">Trocar senha</a
+    ><button type="button" (click)="sair()">Sair</button>
+  </nav>
+  @if (erro()) {
+    <p role="alert" class="erro">{{ erro() }}</p>
+  }
+  <router-outlet />
+</app-page-layout>
