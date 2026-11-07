@@ -1,8 +1,8 @@
 <div class="page-layout">
+  <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <app-floating-menu [items]="menu()" />
-  <main class="page-layout__content">
+  <main id="conteudo" tabindex="-1" class="page-layout__content">
     <ng-content />
   </main>
   <app-footer />
 </div>
-
