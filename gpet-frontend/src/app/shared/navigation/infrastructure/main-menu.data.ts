@@ -37,4 +37,3 @@ export const MAIN_MENU: readonly MenuItem[] = [
   },
   { label: 'Contato', route: '/contato' },
 ];
-
