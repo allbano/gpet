@@ -47,3 +47,32 @@ describe('FloatingMenu', () => {
   });
 });
 
+describe('Menu por teclado', () => {
+  it('mantém o submenu aberto ao mover foco para um de seus links', async () => {
+    await TestBed.configureTestingModule({
+      imports: [FloatingMenu],
+      providers: [provideRouter([])],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(FloatingMenu);
+    fixture.componentRef.setInput('items', [
+      {
+        label: 'Ensino',
+        route: '/ensino',
+        children: [{ label: 'Cursos', route: '/ensino/cursos' }],
+      },
+    ]);
+    fixture.detectChanges();
+    const item = fixture.nativeElement.querySelector('.floating-menu__item');
+    item.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.submenu__link');
+    item.dispatchEvent(new FocusEvent('focusout', { relatedTarget: link }));
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement
+        .querySelector('button[aria-controls="submenu-0"]')
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(fixture.nativeElement.querySelector('a[href="/ensino"]')).toBeTruthy();
+  });
+});
