@@ -1,0 +1,154 @@
+:host {
+  display: block;
+  color: #172f35;
+  font-family: system-ui, sans-serif;
+}
+
+.login-pagina {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 2rem 1rem;
+  background: #f5f8fa;
+}
+
+.login-cartao {
+  width: 100%;
+  max-width: 35rem;
+  padding: 2rem clamp(1.25rem, 6vw, 3.5rem);
+  border: 2px solid #31536b;
+  border-radius: 2rem;
+  background: #fff;
+}
+
+.titulo-acessivel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.login-logo {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  margin: 0 auto 2rem;
+}
+
+.login-formulario {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+.login-campo {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.login-campo label {
+  display: block;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.login-campo input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.125rem;
+  padding: 0.75rem 0.875rem;
+  border: 2px solid #617984;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #172f35;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.login-campo input:focus-visible {
+  border-color: #175b58;
+  outline: 3px solid #9a4900;
+  outline-offset: 3px;
+}
+
+.login-acoes {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.login-acoes > * {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 7rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.login-acoes button {
+  border: 1px solid #175b58;
+  background: #175b58;
+  color: #fff;
+}
+
+.login-acoes button:not(:disabled):hover {
+  border-color: #10413f;
+  background: #10413f;
+}
+
+.login-acoes button:disabled {
+  border-color: #94a3b8;
+  background: #e2e8f0;
+  color: #475569;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.login-voltar {
+  border: 1px solid #175b58;
+  color: #174e4c;
+  background: #fff;
+  text-decoration: none;
+}
+
+.login-voltar:hover {
+  background: #eef5f4;
+}
+
+.login-acoes svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.erro {
+  margin: 0;
+}
+
+@media (max-width: 380px) {
+  .login-acoes > * {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -1,0 +1,122 @@
+<section>
+  <div class="acoes">
+    <h2>Usuários</h2>
+    <button type="button" (click)="abrir(null)">Novo usuário</button
+    ><button type="button" class="secundario" (click)="carregar()">Recarregar</button>
+  </div>
+  @if (erro()) {
+    <p role="alert" class="erro">{{ erro() }}</p>
+  }
+  @if (aviso()) {
+    <p role="status">{{ aviso() }}</p>
+  }
+  @if (aberto()) {
+    <form class="painel" (submit)="salvar($event)">
+      <h3>{{ atual() ? 'Editar usuário' : 'Novo usuário' }}</h3>
+      <label for="usuario-nome">Nome</label
+      ><input id="usuario-nome" [formField]="formulario.nome" autocomplete="name" />
+      <label for="usuario-login">Login</label
+      ><input id="usuario-login" [formField]="formulario.login" autocomplete="off" />
+      @if (!atual()) {
+        <label for="usuario-senha">Senha temporária (8 a 64 caracteres)</label
+        ><input
+          id="usuario-senha"
+          type="password"
+          [formField]="formulario.senhaTemporaria"
+          autocomplete="new-password"
+        />
+      } @else {
+        <label class="check"
+          ><input type="checkbox" [formField]="formulario.ativo" /> Usuário ativo</label
+        >
+      }
+      <div class="acoes">
+        <button type="submit" [disabled]="ocupado() || formulario().invalid()">
+          Salvar usuário</button
+        ><button type="button" class="secundario" (click)="aberto.set(false)">Cancelar</button>
+      </div>
+    </form>
+  }
+  @if (redefinir(); as usuario) {
+    <form class="painel" (submit)="redefinirSenha($event)">
+      <h3>Redefinir senha de {{ usuario.nome }}</h3>
+      <p>As sessões serão encerradas e a troca de senha será obrigatória.</p>
+      <label for="senha-redefinida">Nova senha temporária (8 a 64 caracteres)</label
+      ><input
+        id="senha-redefinida"
+        type="password"
+        [formField]="formularioSenha.senhaTemporaria"
+        autocomplete="new-password"
+      />
+      <div class="acoes">
+        <button type="submit" [disabled]="ocupado()">Redefinir senha</button
+        ><button type="button" class="secundario" (click)="redefinir.set(null)">Cancelar</button>
+      </div>
+    </form>
+  }
+  @if (desativarPendente(); as usuario) {
+    <div class="painel" role="alert">
+      <p>Desativar {{ usuario.nome }} e encerrar suas sessões?</p>
+      <div class="acoes">
+        <button type="button" (click)="desativar()" [disabled]="ocupado()">
+          Confirmar desativação</button
+        ><button type="button" class="secundario" (click)="desativarPendente.set(null)">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+  @if (carregando()) {
+    <p role="status">Carregando usuários…</p>
+  } @else {
+    <ul class="lista-registros">
+      @for (u of itens(); track u.id) {
+        <li>
+          <div>
+            <h3>{{ u.nome }}</h3>
+            <p>
+              {{ u.login }} · {{ u.ativo ? 'Ativo' : 'Desativado'
+              }}{{ u.trocarSenha ? ' · Troca de senha pendente' : '' }}
+            </p>
+          </div>
+          <div class="acoes">
+            <button
+              type="button"
+              class="secundario"
+              (click)="abrir(u)"
+              [attr.aria-label]="'Editar ' + u.nome"
+            >
+              Editar</button
+            ><button
+              type="button"
+              class="secundario"
+              (click)="abrirSenha(u)"
+              [attr.aria-label]="'Redefinir senha de ' + u.nome"
+            >
+              Redefinir senha
+            </button>
+            @if (u.ativo) {
+              <button
+                type="button"
+                class="secundario"
+                (click)="desativarPendente.set(u)"
+                [attr.aria-label]="'Desativar ' + u.nome"
+              >
+                Desativar
+              </button>
+            }
+          </div>
+        </li>
+      } @empty {
+        <li>Nenhum usuário encontrado.</li>
+      }
+    </ul>
+    <nav class="acoes" aria-label="Páginas de usuários">
+      <button type="button" (click)="mudarPagina(-1)" [disabled]="pagina() === 0">Anterior</button
+      ><span>Página {{ pagina() + 1 }} · {{ total() }} registros</span
+      ><button type="button" (click)="mudarPagina(1)" [disabled]="(pagina() + 1) * 20 >= total()">
+        Próxima
+      </button>
+    </nav>
+  }
+</section>

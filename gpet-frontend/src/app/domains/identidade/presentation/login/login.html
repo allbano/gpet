@@ -1,0 +1,48 @@
+<main class="login-pagina">
+  <section class="login-cartao" aria-labelledby="titulo-login">
+    <h1 id="titulo-login" class="titulo-acessivel">Acesso administrativo</h1>
+    <img
+      class="login-logo"
+      ngSrc="/images/gpet-logo-horizontal.jpg"
+      width="4501"
+      height="1473"
+      priority
+      alt="GPET — Educação e Tecnologia, Pessoas e Protagonismos"
+    />
+
+    <form class="login-formulario" (submit)="entrar($event)" [attr.aria-busy]="ocupado()">
+      <div class="login-campo">
+        <label for="login">Usuário</label>
+        <input id="login" autocomplete="username" [formField]="formulario.login" />
+      </div>
+      <div class="login-campo">
+        <label for="senha">Senha</label>
+        <input
+          id="senha"
+          type="password"
+          autocomplete="current-password"
+          [formField]="formulario.senha"
+        />
+      </div>
+
+      @if (erro()) {
+        <p role="alert" class="erro">{{ erro() }}</p>
+      }
+
+      <div class="login-acoes">
+        <a class="login-voltar" routerLink="/">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="m14 6-6 6 6 6" />
+          </svg>
+          Voltar
+        </a>
+        <button type="submit" [disabled]="ocupado() || formulario().invalid()">
+          {{ ocupado() ? 'Entrando…' : 'Logar' }}
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="m10 6 6 6-6 6" />
+          </svg>
+        </button>
+      </div>
+    </form>
+  </section>
+</main>

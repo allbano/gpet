@@ -1,0 +1,30 @@
+<app-page-layout
+  ><section class="painel estreito">
+    <h1>Trocar senha</h1>
+    <p>Use de 8 a 64 caracteres. Após salvar, entre novamente com a nova senha.</p>
+    @if (erro()) {
+      <p role="alert" class="erro">{{ erro() }}</p>
+    }
+    <form (submit)="salvar($event)">
+      <label for="atual">Senha atual</label
+      ><input
+        id="atual"
+        type="password"
+        autocomplete="current-password"
+        [formField]="formulario.atual"
+      />
+      <label for="nova">Nova senha</label
+      ><input id="nova" type="password" autocomplete="new-password" [formField]="formulario.nova" />
+      <label for="confirmacao">Confirme a nova senha</label
+      ><input
+        id="confirmacao"
+        type="password"
+        autocomplete="new-password"
+        [formField]="formulario.confirmacao"
+      />
+      <button type="submit" [disabled]="ocupado() || formulario().invalid()">
+        Salvar nova senha
+      </button>
+    </form>
+  </section></app-page-layout
+>
