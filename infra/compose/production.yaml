@@ -1,0 +1,31 @@
+# Configuração do ambiente; use o arquivo de entrada na raiz.
+include:
+  - path: ./infra/compose/resources.yaml
+    project_directory: .
+services:
+  db:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: db
+  migrate:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: migrate
+  bootstrap:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: bootstrap
+  backend:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: backend
+  frontend:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: frontend
+    ports:
+      - '${GPET_HTTP_PORT:?Defina GPET_HTTP_PORT em infra/.env}:80'
+      - '${GPET_HTTPS_PORT:?Defina GPET_HTTPS_PORT em infra/.env}:443'
+    volumes:
+      - ${GPET_TLS_DIR:?Defina GPET_TLS_DIR em infra/.env}:/etc/nginx/tls:ro
+      - ${GPET_ACME_DIR:?Defina GPET_ACME_DIR em infra/.env}:/var/www/acme:ro

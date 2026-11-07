@@ -1,0 +1,6 @@
+# Produção com TLS: docker compose -f compose.yaml up -d --build
+name: ${COMPOSE_PROJECT_NAME:-gpet}
+include:
+  - path: ./infra/compose/production.yaml
+    project_directory: .
+    env_file: ./infra/.env

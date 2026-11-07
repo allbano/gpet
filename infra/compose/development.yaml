@@ -1,0 +1,41 @@
+# Configuração do ambiente; use o arquivo de entrada na raiz.
+include:
+  - path: ./infra/compose/resources.yaml
+    project_directory: .
+services:
+  db:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: db
+    networks:
+      - desenvolvimento
+    ports:
+      - '127.0.0.1:${GPET_DB_PORT:?Defina GPET_DB_PORT em infra/.env}:5432'
+  migrate:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: migrate
+  bootstrap:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: bootstrap
+  backend:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: backend
+    networks:
+      - desenvolvimento
+    ports:
+      - '127.0.0.1:${GPET_BACKEND_PORT:?Defina GPET_BACKEND_PORT em infra/.env}:8080'
+    environment:
+      GPET_COOKIE_SECURE: ${GPET_DEV_COOKIE_SECURE:?Defina GPET_DEV_COOKIE_SECURE em infra/.env}
+  frontend:
+    extends:
+      file: ./infra/compose/services.yaml
+      service: frontend
+    ports:
+      - '127.0.0.1:${GPET_DEV_HTTP_PORT:?Defina GPET_DEV_HTTP_PORT em infra/.env}:80'
+    volumes:
+      - ./infra/nginx/development.conf:/etc/nginx/conf.d/default.conf:ro
+networks:
+  desenvolvimento:

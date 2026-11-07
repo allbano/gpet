@@ -1,0 +1,6 @@
+# Desenvolvimento HTTP em loopback: docker compose -f compose.dev.yaml up -d --build
+name: ${COMPOSE_PROJECT_NAME:-gpet}
+include:
+  - path: ./infra/compose/development.yaml
+    project_directory: .
+    env_file: ./infra/.env

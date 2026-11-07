@@ -1,0 +1,10 @@
+# Caminhos resolvidos a partir da raiz pelo project_directory de include.
+secrets:
+  db_password:
+    file: ${GPET_DB_PASSWORD_FILE:?Defina GPET_DB_PASSWORD_FILE em infra/.env}
+  admin_password:
+    file: ${GPET_ADMIN_PASSWORD_FILE:?Defina GPET_ADMIN_PASSWORD_FILE em infra/.env}
+networks:
+  dados:
+    internal: true
+  web:

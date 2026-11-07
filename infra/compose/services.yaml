@@ -1,0 +1,81 @@
+# Definições compartilhadas; execute compose.yaml ou compose.dev.yaml na raiz.
+x-backend: &backend
+  image: gpet-backend:${GPET_IMAGE_TAG:?Defina GPET_IMAGE_TAG em infra/.env}
+  build: ../../gpet-backend
+  environment: &backend-env
+    GPET_DB_URL: ${GPET_DB_URL:?Defina GPET_DB_URL em infra/.env}
+    GPET_DB_USER: ${GPET_DB_USER:?Defina GPET_DB_USER em infra/.env}
+    GPET_DB_PASSWORD_FILE: ${GPET_CONTAINER_DB_PASSWORD_FILE:?Defina GPET_CONTAINER_DB_PASSWORD_FILE em infra/.env}
+    GPET_COOKIE_SECURE: ${GPET_COOKIE_SECURE:?Defina GPET_COOKIE_SECURE em infra/.env}
+  secrets:
+    - source: db_password
+      target: ${GPET_CONTAINER_DB_PASSWORD_FILE:?Defina GPET_CONTAINER_DB_PASSWORD_FILE em infra/.env}
+  networks:
+    - dados
+  security_opt:
+    - no-new-privileges:true
+services:
+  db:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: ${GPET_DB_NAME:?Defina GPET_DB_NAME em infra/.env}
+      POSTGRES_USER: ${GPET_DB_USER:?Defina GPET_DB_USER em infra/.env}
+      POSTGRES_PASSWORD_FILE: ${GPET_CONTAINER_DB_PASSWORD_FILE:?Defina GPET_CONTAINER_DB_PASSWORD_FILE em infra/.env}
+    secrets:
+      - source: db_password
+        target: ${GPET_CONTAINER_DB_PASSWORD_FILE:?Defina GPET_CONTAINER_DB_PASSWORD_FILE em infra/.env}
+    volumes:
+      - type: bind
+        source: ${GPET_POSTGRES_DATA_DIR:?Defina GPET_POSTGRES_DATA_DIR em infra/.env}
+        target: /var/lib/postgresql
+    networks:
+      - dados
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    <<: *backend
+    command: [migrate-bootstrap]
+    environment: &bootstrap-env
+      <<: *backend-env
+      GPET_ADMIN_PASSWORD_FILE: ${GPET_CONTAINER_ADMIN_PASSWORD_FILE:?Defina GPET_CONTAINER_ADMIN_PASSWORD_FILE em infra/.env}
+    secrets: &bootstrap-secrets
+      - source: db_password
+        target: ${GPET_CONTAINER_DB_PASSWORD_FILE:?Defina GPET_CONTAINER_DB_PASSWORD_FILE em infra/.env}
+      - source: admin_password
+        target: ${GPET_CONTAINER_ADMIN_PASSWORD_FILE:?Defina GPET_CONTAINER_ADMIN_PASSWORD_FILE em infra/.env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+  bootstrap:
+    <<: *backend
+    command: [bootstrap]
+    environment: *bootstrap-env
+    secrets: *bootstrap-secrets
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: [ops]
+    restart: 'no'
+  backend:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  frontend:
+    image: gpet-frontend:${GPET_IMAGE_TAG:?Defina GPET_IMAGE_TAG em infra/.env}
+    build: ../../gpet-frontend
+    networks:
+      - dados
+      - web
+    depends_on:
+      backend:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

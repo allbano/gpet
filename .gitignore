@@ -1,6 +1,6 @@
 # Pasta do vscode
 .vscode/
-.github/
+.github/skills/
 .agents/
 .opencode/
 .kimi-code/
@@ -9,3 +9,12 @@ node_modules/
 .quarkus/
 # Gradle CLI local artifacts
 .gradle/
+
+.secrets/
+.env
+infra/tls/*.pem
+infra/acme/
+backups/
+infra/data/
+**/playwright-report/
+**/test-results/
