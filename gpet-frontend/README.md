@@ -1,59 +1,42 @@
-# GpetFrontend
+# GPET frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.5.
+Angular 22, TypeScript estrito, signals, Signal Forms e rotas lazy. Node 26.13.0 e npm 12.2.1 no build. Produção serve a SPA com NGINX e proxy `/api` na mesma origem.
 
-## Development server
+Antes de iniciar, crie `../infra/.env` a partir de `../infra/.env.example`, caso ainda não exista. Esse arquivo reúne as portas, o host do Angular, os parâmetros do proxy e do E2E; `npm start` e Playwright o carregam automaticamente.
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Nesta pasta:
 
 ```bash
-ng generate component component-name
+npm ci
+npm start
+npm run test:unit
+npm run build
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+O servidor dev abre em `http://localhost:4200` e encaminha `/api/**` ao backend em `http://127.0.0.1:8080`, conforme `proxy.conf.cjs`. O build fica em `dist/gpet-frontend/browser`.
+
+Para usar backend e banco em Docker com este servidor de desenvolvimento, execute na raiz do repositório:
 
 ```bash
-ng generate --help
+docker compose -f compose.dev.yaml stop frontend
+docker compose -f compose.dev.yaml up -d --wait backend
 ```
 
-## Building
+Depois execute `npm start` nesta pasta e abra `http://localhost:4200`. Não é necessário reconstruir a imagem do frontend para editar os componentes. O `npm start` e o proxy leem `../infra/.env`. Reinicie o processo após alterar essa configuração.
 
-To build the project run:
+Testes unitários usam Vitest/TestBed, HTTP mock e fixtures fictícios em `src/testing`. Incluem autenticação, guards, formulários, catálogos, paginação, erros de rede, conflitos e navegação por teclado.
+
+E2E requer uma instalação GPET de teste, com banco novo e bootstrap concluído:
 
 ```bash
-ng build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+A URL padrão é `http://127.0.0.1:8088`; ajuste `GPET_E2E_URL` em `infra/.env` para alterar. O arquivo de senha aponta ao secret inicial da instalação descartável. O E2E troca essa senha e cria dados fictícios; use banco novo a cada rodada. Playwright testa o fluxo completo e AXE verifica as páginas e formulários exercitados. O relatório fica em `playwright-report/`.
 
-## Running unit tests
+A Home foi preservada. Pesquisa, Extensão, Produção, Biblioteca e Materiais possuem páginas honestas de conteúdo ainda não publicado. Endereços desconhecidos exibem página de não encontrado. Não há CRUD de menus.
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+O menu público não possui links de administração ou login. O acesso administrativo começa diretamente em `/gpet-admin/login` (no servidor Angular: `http://localhost:4200/gpet-admin/login`). O caminho antigo `/login` não abre o formulário. Logout, troca de senha e guards encaminham ao novo endereço.
 
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+[Arquitetura](../docs/arquitetura.md), [plano e checklist](../docs/plan/plano_de_implementacao_gpet.md) e [operação](../docs/operacao.md).

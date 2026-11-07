@@ -29,3 +29,7 @@ src/app/
 - Logos SEPT/UFPR e foto do grupo ainda não existem em `/images`: há placeholders acessíveis até serem fornecidos.
 - Nenhum caso exigiu abrir mão da composição.
 
+
+## Implementação administrativa e pública
+
+Os contextos `identidade` e `atividades` adicionam os contratos, regras, sessões, formulários e páginas descritos em [arquitetura e testes](arquitetura.md). `shared/infrastructure/api.ts` centraliza o transporte HTTP; mocks tipados ficam apenas em `src/testing` e `.spec.ts`. O menu oferece links diretos e botões de submenu separados, foco por teclado, Escape e atalho para o conteúdo. Todas as rotas têm título e carregamento lazy; a Home institucional permanece existente.

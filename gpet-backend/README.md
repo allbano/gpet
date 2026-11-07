@@ -1,68 +1,23 @@
-# gpet-backend
+# GPET backend
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+Kotlin 2.4.10, Quarkus 3.40.1.1, Java 25 e jOOQ. Os contextos `identidade` e `atividades` separam domínio, aplicação, adaptadores e HTTP. PostgreSQL 18.6 é a persistência real; não há Hibernate/Panache.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+A partir desta pasta:
 
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live coding using:
-
-```shell script
-./gradlew quarkusDev
+```bash
+./gradlew test
+../scripts/backend-dev.sh
+./gradlew testNative -Dquarkus.native.enabled=true -Dquarkus.package.jar.enabled=false
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+A primeira compilação requer Docker para gerar tipos jOOQ em um PostgreSQL descartável com as migrations aplicadas. Os arquivos gerados ficam no diretório de build. `test` executa testes de domínio e casos de uso com mocks e integração PostgreSQL. `testNative` repete o contrato HTTP no executável compilado com GraalVM 25.0.2.
 
-## Packaging and running the application
+Para desenvolvimento JVM, copie `infra/.env.example` para `infra/.env` na raiz do repositório e configure ali `GPET_DB_DEV_URL`, `GPET_DB_USER` e `GPET_DB_PASSWORD_FILE`; o script carrega o ambiente e lê a senha do secret; o perfil dev aplica migrations ao iniciar. `./gradlew quarkusBuild` produz `build/quarkus-app/quarkus-run.jar`. No Compose, o serviço `migrate` aplica migrations e inicializa a conta antes de iniciar a aplicação.
 
-The application can be packaged using:
+Os comandos operacionais `migrate`, `migrate-bootstrap` e `bootstrap` são argumentos do executável ou do JAR. Bootstrap exige `GPET_ADMIN_PASSWORD_FILE` e só cria `admin` quando a tabela de usuários está vazia. A senha inicial precisa ser trocada. `migrate-bootstrap` aplica migrations e executa esse bootstrap idempotente; é o comando usado automaticamente no Compose. Contas, hashes e senhas já trocadas são preservados. Não há senha padrão nem endpoint público de cadastro.
 
-```shell script
-./gradlew build
-```
+API sob `/api/v1`: `auth`, `admin/usuarios`, `admin/atividades`, `admin/categorias`, `admin/formatos` e consultas `public/*`. JSON usa camelCase; erros usam `codigo`/`mensagem`. Paginação começa em zero, com tamanho padrão 20 e máximo 100. Atualizações/exclusões exigem versão; conflitos retornam 409. Sessão por cookie e mutações autenticadas com `X-CSRF-Token`. Login exige `X-GPET-Request: 1`.
 
-It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
+[Plano e evidências](../docs/plan/plano_de_implementacao_gpet.md), [arquitetura](../docs/arquitetura.md) e [operação](../docs/operacao.md). O Compose usa o Dockerfile na raiz desta pasta.
 
-The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./gradlew build -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar build/*-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./gradlew build -Dquarkus.native.enabled=true
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./build/gpet-backend-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/gradle-tooling>.
-
-## Related Guides
-
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Kotlin ([guide](https://quarkus.io/guides/kotlin)): Write your services in Kotlin
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
-
-## Provided Code
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+O Dockerfile multiestágio compila dos fontes com GraalVM CE 25.0.2 e executa jOOQ contra um PostgreSQL efêmero do builder. A imagem final contém somente o executável nativo e os recursos de execução, sem JVM nem ferramenta de compilação. `docker compose -f compose.dev.yaml up -d --build` na raiz faz todo o build. Confira `docker compose -f compose.dev.yaml exec backend cat /work/graalvm-build.txt`. O arquivo `.dockerignore` exclui artefatos de build do host. O PostgreSQL da aplicação usa o diretório persistente definido em `GPET_POSTGRES_DATA_DIR`.
