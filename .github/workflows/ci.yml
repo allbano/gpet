@@ -1,0 +1,127 @@
+name: GPET
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: gpet-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.0
+          cache: npm
+          cache-dependency-path: gpet-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run build
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25.0.2'
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ./gpet-backend/gradlew -p gpet-backend test --console=plain
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testes-backend
+          path: gpet-backend/build/reports/tests/
+  native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25.0.2'
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ./gpet-backend/gradlew -p gpet-backend testNative --console=plain -Dquarkus.native.enabled=true -Dquarkus.package.jar.enabled=false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-nativo
+          path: gpet-backend/build/*-runner
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testes-nativos
+          path: gpet-backend/build/reports/tests/
+  e2e:
+    runs-on: ubuntu-24.04
+    needs: [frontend, backend, native]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.0
+          cache: npm
+          cache-dependency-path: gpet-frontend/package-lock.json
+      - name: Criar segredos efêmeros de teste
+        run: |
+          mkdir -p .secrets
+          python3 - <<'PY'
+          import secrets
+          from pathlib import Path
+          env = (Path('infra/.env.example').read_text()
+              .replace('COMPOSE_PROJECT_NAME=gpet', 'COMPOSE_PROJECT_NAME=gpet-ci')
+              .replace('GPET_E2E_DISPOSABLE=false', 'GPET_E2E_DISPOSABLE=true')
+              .replace('GPET_POSTGRES_DATA_DIR=/var/lib/gpet/postgres', 'GPET_POSTGRES_DATA_DIR=/tmp/gpet-ci/postgres'))
+          Path('/tmp/gpet-ci').mkdir(mode=0o700, exist_ok=True)
+          Path('infra/.env').write_text(env)
+          for name in ['db_password', 'admin_password']:
+              p = Path('.secrets') / name
+              p.write_text(secrets.token_urlsafe(32))
+              p.chmod(0o644)  # Disponível ao usuário não root do container neste runner efêmero.
+          PY
+      - run: python3 scripts/test-infra.py
+      - run: node --test scripts/e2e-environment.test.cjs
+      - run: docker compose --env-file infra/.env -f compose.dev.yaml build
+      - name: Verificar compilador da imagem nativa
+        run: docker run --rm --entrypoint cat gpet-backend:local /work/graalvm-build.txt
+      - run: docker compose --env-file infra/.env -f compose.dev.yaml up -d --wait
+      - run: docker compose --env-file infra/.env -f compose.dev.yaml --profile ops run --rm bootstrap
+      - name: Verificar preservação da senha após recriar containers
+        run: |
+          source scripts/load-env.sh
+          # O aceite preserva o secret inicial durante a recriação do banco.
+          GPET_E2E_PASSWORD_FILE=/tmp/gpet-ci/e2e-password python3 scripts/test-persistence.py
+          # Após o aceite, guardar a senha vigente da conta fictícia no secret do CI.
+          # Escrever no mesmo arquivo preserva o bind mount dos comandos operacionais.
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          destino = Path(os.environ['GPET_ADMIN_PASSWORD_FILE'])
+          destino.write_text(Path('/tmp/gpet-ci/e2e-password').read_text())
+          destino.chmod(0o644)
+          assert destino.samefile(Path(os.environ['GPET_E2E_PASSWORD_FILE']))
+          PY
+      - run: npm ci
+        working-directory: gpet-frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: gpet-frontend
+      - run: npm run test:e2e
+        working-directory: gpet-frontend
+      - name: Verificar backup e restauração
+        run: |
+          scripts/backup.sh
+          scripts/test-restore.sh "$(find backups -name '*.dump' -print -quit)"
+      - run: docker compose --env-file infra/.env -f compose.dev.yaml logs --no-color > /tmp/gpet-compose.log
+        if: always()
+      - run: docker compose --env-file infra/.env -f compose.dev.yaml down --volumes
+        if: always()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencias-e2e
+          path: |
+            gpet-frontend/playwright-report/
+            gpet-frontend/test-results/
+            /tmp/gpet-compose.log
