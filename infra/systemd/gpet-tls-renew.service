@@ -1,0 +1,8 @@
+[Unit]
+Description=Renovar TLS do GPET e recarregar NGINX
+After=docker.service network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gpet
+EnvironmentFile=/opt/gpet/infra/.env
+ExecStart=/bin/bash ${GPET_DEPLOY_DIR}/scripts/renew-tls.sh
