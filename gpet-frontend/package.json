@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node ../scripts/frontend-dev.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:unit": "ng test --watch=false",
+    "test:e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@12.2.1",
@@ -24,6 +26,8 @@
     "@angular/build": "^22.2.5",
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.0",
     "@tailwindcss/postcss": "^4.1.12",
     "jsdom": "^30.0.0",
     "postcss": "^8.5.3",
