@@ -1,0 +1,75 @@
+<section aria-labelledby="atividades-titulo">
+  <div class="acoes">
+    <h2 id="atividades-titulo">Atividades de Ensino</h2>
+    <button type="button" (click)="abrir(null)">Nova atividade</button
+    ><button type="button" class="secundario" (click)="carregar()">Recarregar</button>
+  </div>
+  @if (erro()) {
+    <p role="alert" class="erro">{{ erro() }}</p>
+  }
+  @if (aviso()) {
+    <p role="status">{{ aviso() }}</p>
+  }
+  @if (editar()) {
+    <h3>{{ atual() ? 'Editar atividade' : 'Nova atividade' }}</h3>
+    <app-atividade-form
+      [inicial]="atual()"
+      [categorias]="categorias()"
+      [formatos]="formatos()"
+      [ocupado]="ocupado()"
+      (salvar)="salvar($event)"
+      (cancelar)="editar.set(false)"
+    />
+  }
+  @if (excluirPendente(); as item) {
+    <div class="painel" role="alert">
+      <p>Excluir “{{ item.titulo }}” da área pública?</p>
+      <div class="acoes">
+        <button type="button" (click)="excluir()" [disabled]="ocupado()">Confirmar exclusão</button
+        ><button type="button" class="secundario" (click)="excluirPendente.set(null)">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+  @if (carregando()) {
+    <p role="status">Carregando atividades…</p>
+  } @else {
+    <ul class="lista-registros">
+      @for (item of itens(); track item.id) {
+        <li>
+          <div>
+            <h3>{{ item.titulo }}</h3>
+            <p>{{ item.natureza }} · {{ item.cargaHoraria }}</p>
+          </div>
+          <div class="acoes">
+            <button
+              type="button"
+              class="secundario"
+              (click)="abrir(item)"
+              [attr.aria-label]="'Editar ' + item.titulo"
+            >
+              Editar</button
+            ><button
+              type="button"
+              class="secundario"
+              (click)="excluirPendente.set(item)"
+              [attr.aria-label]="'Excluir ' + item.titulo"
+            >
+              Excluir
+            </button>
+          </div>
+        </li>
+      } @empty {
+        <li>Nenhuma atividade cadastrada.</li>
+      }
+    </ul>
+    <nav class="acoes" aria-label="Páginas de atividades">
+      <button type="button" (click)="mudarPagina(-1)" [disabled]="pagina() === 0">Anterior</button
+      ><span>Página {{ pagina() + 1 }} · {{ total() }} registros</span
+      ><button type="button" (click)="mudarPagina(1)" [disabled]="(pagina() + 1) * 20 >= total()">
+        Próxima
+      </button>
+    </nav>
+  }
+</section>

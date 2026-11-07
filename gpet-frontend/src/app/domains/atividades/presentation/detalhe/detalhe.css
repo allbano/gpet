@@ -1,0 +1,7 @@
+.texto-livre {
+  white-space: pre-wrap;
+}
+dt {
+  font-weight: 700;
+  margin-top: 1rem;
+}

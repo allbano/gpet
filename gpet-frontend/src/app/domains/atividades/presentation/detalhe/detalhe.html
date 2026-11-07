@@ -1,0 +1,27 @@
+<app-page-layout
+  ><a routerLink="/ensino">Voltar para Ensino</a>
+  @if (carregando()) {
+    <h1>Atividade de Ensino</h1>
+    <p role="status">Carregando atividade…</p>
+  } @else if (erro()) {
+    <h1>Atividade indisponível</h1>
+    <p role="alert" class="erro">{{ erro() }}</p>
+  } @else if (atividade(); as a) {
+    <article class="painel">
+      <h1>{{ a.titulo }}</h1>
+      <p>{{ a.natureza }} · {{ a.categoriaNome }} · {{ a.formatoNome }}</p>
+      <h2>{{ a.natureza === 'informativa' ? 'Objetivo' : 'Descrição' }}</h2>
+      <p class="texto-livre">{{ a.objetivo || a.descricao }}</p>
+      <dl>
+        <dt>Carga horária</dt>
+        <dd>{{ a.cargaHoraria }}</dd>
+        <dt>Período</dt>
+        <dd>
+          {{ a.inicio | date: 'dd/MM/yyyy' : 'UTC' }} a {{ a.fim | date: 'dd/MM/yyyy' : 'UTC' }}
+        </dd>
+        <dt>Público-alvo</dt>
+        <dd>{{ a.publicoAlvo }}</dd>
+      </dl>
+    </article>
+  }
+</app-page-layout>

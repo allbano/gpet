@@ -1,0 +1,75 @@
+<form (submit)="enviar($event)" class="painel" aria-label="Cadastro de atividade">
+  @if (erros().length) {
+    <div role="alert" class="erro">
+      <ul>
+        @for (erro of erros(); track erro) {
+          <li>{{ erro }}</li>
+        }
+      </ul>
+    </div>
+  }
+  <div class="grade-form">
+    <div>
+      <label for="natureza">Natureza</label
+      ><select id="natureza" [formField]="formulario.natureza" (change)="mudarNatureza()">
+        <option value="informativa">Informativa</option>
+        <option value="formativa">Formativa</option>
+      </select>
+    </div>
+    <div>
+      <label for="titulo">Título</label><input id="titulo" [formField]="formulario.titulo" />
+    </div>
+    <div>
+      <label for="categoria">Categoria</label
+      ><select id="categoria" [formField]="formulario.categoriaId">
+        <option value="">Selecione</option>
+        @for (c of categoriasVisiveis(); track c.id) {
+          <option [value]="c.id">{{ c.nome }}{{ c.ativo ? '' : ' (desativada)' }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="formato">Formato</label
+      ><select id="formato" [formField]="formulario.formatoId">
+        <option value="">Selecione</option>
+        @for (f of formatosVisiveis(); track f.id) {
+          <option [value]="f.id">{{ f.nome }}{{ f.ativo ? '' : ' (desativado)' }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="carga">Carga horária</label
+      ><input
+        id="carga"
+        [formField]="formulario.cargaHoraria"
+        aria-describedby="ajuda-carga"
+      /><small id="ajuda-carga">Texto livre, por exemplo: 20 horas e estudo autônomo.</small>
+    </div>
+    <div>
+      <label for="publico">Público-alvo</label
+      ><input id="publico" [formField]="formulario.publicoAlvo" />
+    </div>
+    <div>
+      <label for="inicio">Data de início</label
+      ><input id="inicio" type="date" [formField]="formulario.inicio" />
+    </div>
+    <div>
+      <label for="fim">Data de fim</label
+      ><input id="fim" type="date" [formField]="formulario.fim" />
+    </div>
+  </div>
+  @if (dados().natureza === 'informativa') {
+    <label for="objetivo">Objetivo</label
+    ><textarea id="objetivo" [formField]="formulario.objetivo" rows="5"></textarea>
+  } @else {
+    <label for="descricao">Descrição</label
+    ><textarea id="descricao" [formField]="formulario.descricao" rows="5"></textarea>
+  }
+  <div class="acoes">
+    <button type="submit" [disabled]="ocupado()">
+      {{ ocupado() ? 'Salvando…' : 'Salvar atividade' }}</button
+    ><button type="button" class="secundario" (click)="cancelar.emit()" [disabled]="ocupado()">
+      Cancelar
+    </button>
+  </div>
+</form>

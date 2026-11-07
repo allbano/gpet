@@ -1,0 +1,69 @@
+<app-page-layout
+  ><section aria-labelledby="titulo-ensino">
+    <h1 id="titulo-ensino">Ensino</h1>
+    <p>Conheça as atividades informativas e formativas do GPET.</p>
+    <form class="painel grade-form" (submit)="filtrar($event)" aria-label="Filtros de atividades">
+      <div>
+        <label for="filtro-titulo">Título</label
+        ><input id="filtro-titulo" [formField]="formulario.titulo" />
+      </div>
+      <div>
+        <label for="filtro-natureza">Natureza</label
+        ><select id="filtro-natureza" [formField]="formulario.natureza" (change)="mudarNatureza()">
+          <option value="">Todas</option>
+          <option value="informativa">Informativa</option>
+          <option value="formativa">Formativa</option>
+        </select>
+      </div>
+      <div>
+        <label for="filtro-categoria">Categoria</label
+        ><select id="filtro-categoria" [formField]="formulario.categoriaId">
+          <option value="">Todas</option>
+          @for (c of categoriasVisiveis(); track c.id) {
+            <option [value]="c.id">{{ c.nome }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="filtro-formato">Formato</label
+        ><select id="filtro-formato" [formField]="formulario.formatoId">
+          <option value="">Todos</option>
+          @for (f of formatos(); track f.id) {
+            <option [value]="f.id">{{ f.nome }}</option>
+          }
+        </select>
+      </div>
+      <button type="submit" [disabled]="carregando()">Aplicar filtros</button>
+    </form>
+    @if (erro()) {
+      <p role="alert" class="erro">{{ erro() }}</p>
+      <button type="button" (click)="iniciar()">Tentar novamente</button>
+    }
+    @if (carregando()) {
+      <p role="status">Carregando atividades…</p>
+    } @else if (!erro()) {
+      <ul class="lista-registros">
+        @for (a of itens(); track a.id) {
+          <li>
+            <article>
+              <h2>
+                <a [routerLink]="['/ensino/atividades', a.id]">{{ a.titulo }}</a>
+              </h2>
+              <p>{{ a.categoriaNome }} · {{ a.formatoNome }}</p>
+              <p>{{ a.cargaHoraria }} · {{ a.publicoAlvo }}</p>
+            </article>
+          </li>
+        } @empty {
+          <li>Nenhuma atividade encontrada para esses filtros.</li>
+        }
+      </ul>
+      <nav class="acoes" aria-label="Páginas de atividades">
+        <button type="button" (click)="mudarPagina(-1)" [disabled]="pagina() === 0">Anterior</button
+        ><span>Página {{ pagina() + 1 }} · {{ total() }} atividades</span
+        ><button type="button" (click)="mudarPagina(1)" [disabled]="(pagina() + 1) * 20 >= total()">
+          Próxima
+        </button>
+      </nav>
+    }
+  </section></app-page-layout
+>
