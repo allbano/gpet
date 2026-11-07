@@ -1,0 +1,94 @@
+<section>
+  <div class="acoes">
+    <h2>{{ titulo }}</h2>
+    <button type="button" (click)="abrir(null)">Novo cadastro</button
+    ><button type="button" class="secundario" (click)="carregar()">Recarregar</button>
+  </div>
+  @if (erro()) {
+    <p role="alert" class="erro">{{ erro() }}</p>
+  }
+  @if (aviso()) {
+    <p role="status">{{ aviso() }}</p>
+  }
+  @if (aberto()) {
+    <form class="painel" (submit)="salvar($event)">
+      <h3>{{ atual() ? 'Editar cadastro' : 'Novo cadastro' }}</h3>
+      <label for="nome-catalogo">Nome</label
+      ><input id="nome-catalogo" [formField]="formulario.nome" />
+      @if (categoria) {
+        <label for="natureza-catalogo">Natureza</label
+        ><select id="natureza-catalogo" [formField]="formulario.natureza">
+          <option value="informativa">Informativa</option>
+          <option value="formativa">Formativa</option>
+        </select>
+      }
+      <label for="descricao-catalogo">Descrição</label
+      ><textarea id="descricao-catalogo" [formField]="formulario.descricao" rows="4"></textarea>
+      <label class="check"
+        ><input type="checkbox" [formField]="formulario.ativo" /> Disponível para novos
+        cadastros</label
+      >
+      <div class="acoes">
+        <button type="submit" [disabled]="ocupado() || formulario().invalid()">Salvar</button
+        ><button type="button" class="secundario" (click)="aberto.set(false)">Cancelar</button>
+      </div>
+    </form>
+  }
+  @if (excluirPendente(); as item) {
+    <div class="painel" role="alert">
+      <p>Excluir “{{ item.nome }}”? Se houver referências, o cadastro será desativado.</p>
+      <div class="acoes">
+        <button type="button" (click)="excluir()" [disabled]="ocupado()">Confirmar exclusão</button
+        ><button type="button" class="secundario" (click)="excluirPendente.set(null)">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+  @if (carregando()) {
+    <p role="status">Carregando cadastros…</p>
+  } @else {
+    <ul class="lista-registros">
+      @for (item of itens(); track item.id) {
+        <li>
+          <div>
+            <h3>{{ item.nome }}</h3>
+            <p>{{ item.descricao }}</p>
+            <p>
+              @if (categoria) {
+                {{ item.natureza }} ·
+              }
+              {{ item.ativo ? 'Ativo' : 'Desativado' }}
+            </p>
+          </div>
+          <div class="acoes">
+            <button
+              type="button"
+              class="secundario"
+              (click)="abrir(item)"
+              [attr.aria-label]="'Editar ' + item.nome"
+            >
+              Editar</button
+            ><button
+              type="button"
+              class="secundario"
+              (click)="excluirPendente.set(item)"
+              [attr.aria-label]="'Excluir ' + item.nome"
+            >
+              Excluir
+            </button>
+          </div>
+        </li>
+      } @empty {
+        <li>Nenhum cadastro encontrado.</li>
+      }
+    </ul>
+    <nav class="acoes" [attr.aria-label]="'Páginas de ' + titulo">
+      <button type="button" (click)="mudarPagina(-1)" [disabled]="pagina() === 0">Anterior</button
+      ><span>Página {{ pagina() + 1 }} · {{ total() }} registros</span
+      ><button type="button" (click)="mudarPagina(1)" [disabled]="(pagina() + 1) * 20 >= total()">
+        Próxima
+      </button>
+    </nav>
+  }
+</section>
