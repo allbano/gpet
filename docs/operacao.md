@@ -98,6 +98,12 @@ A emissão real, DNS e ativação do timer dependem do domínio e do servidor da
 - O fallback Angular só atende rotas de frontend. `/api/` é encaminhado ao backend e preserva erros JSON.
 - API documentada por OpenAPI no backend; não há proxy público para `/q/` no NGINX.
 
+### OpenAPI e Swagger UI
+
+No desenvolvimento local, execute `scripts/backend-dev.sh` e abra diretamente **http://localhost:8080/q/swagger-ui** ou **http://localhost:8080/q/openapi**. Não use as origens do Angular ou do NGINX: nenhum deles encaminha `/q/`. A especificação usa a mesma origem relativa e apresenta exemplos fictícios; não informe credenciais reais ao experimentar o fluxo autenticado.
+
+Os testes JVM consomem `/q/openapi` no perfil `test`. Os binários nativos usam o perfil `prod`, no qual OpenAPI e Swagger UI estão desabilitados em build time. Por isso, **tanto `compose.dev.yaml` quanto `compose.yaml` ficam sem essas rotas nesta entrega**, embora o primeiro seja destinado ao desenvolvimento via containers. O `testNative` verifica essa indisponibilidade e repete o contrato de negócio. Uma futura liberação no Compose ou em produção exigirá decisão de segurança e uma estratégia explícita de build/perfil; ocultar uma rota na UI não seria controle de acesso.
+
 ## Backup e restauração
 
 Antes de qualquer migration de produção, configure `GPET_BACKUP_DIR` em `infra/.env`:
