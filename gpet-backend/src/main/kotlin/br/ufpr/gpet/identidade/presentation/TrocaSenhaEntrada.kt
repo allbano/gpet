@@ -1,7 +1,9 @@
 package br.ufpr.gpet.identidade.presentation
 
-import br.ufpr.gpet.shared.domain.*
-import jakarta.ws.rs.*
-import jakarta.ws.rs.core.*
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 
-data class TrocaSenhaEntrada(val senhaAtual: String, val novaSenha: String)
+@Schema(description = "Troca da própria senha; todas as sessões do usuário são revogadas.")
+data class TrocaSenhaEntrada(
+    @field:Schema(format = "password", maxLength = 1024, required = true) val senhaAtual: String,
+    @field:Schema(format = "password", minLength = 8, maxLength = 64, required = true, example = "nova senha ficticia") val novaSenha: String,
+)

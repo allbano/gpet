@@ -1,48 +1,46 @@
 package br.ufpr.gpet.shared.presentation
 
-import br.ufpr.gpet.shared.domain.Falha
+import br.ufpr.gpet.shared.domain.*
 import jakarta.ws.rs.WebApplicationException
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.ExceptionMapper
 import jakarta.ws.rs.ext.Provider
-import org.jooq.exception.DataAccessException
 import org.jboss.logging.Logger
 
 @Provider
-
 class ErrosHttp : ExceptionMapper<Exception> {
-    override fun toResponse(exception: Exception): Response {
-        val falha = when (exception) {
-            is Falha -> exception
-            is DataAccessException -> when (exception.sqlState()) {
-                "23505" -> Falha(409, "duplicado", "Já existe um registro com esse nome ou login.")
-                "23503" -> Falha(
-                    409,
-                    "referenciado",
-                    "O registro possui referências ou uma associação inválida."
-                )
+    private data class Detalhe(val status: Int, val codigo: String, val mensagem: String)
 
-                "23514", "22001" -> Falha(
-                    400,
-                    "validacao",
-                    "Os dados violam uma regra de cadastro."
-                )
+    companion object {
+        private val logger = Logger.getLogger(ErrosHttp::class.java)
 
-                else -> Falha(500, "erro_interno", "Não foi possível concluir a operação.")
+        fun resposta(exception: Exception): Response {
+            val detalhe = when (exception) {
+                is Validacao -> Detalhe(400, "validacao", exception.message)
+                is NaoEncontrado -> Detalhe(404, "nao_encontrado", exception.message)
+                is Conflito -> Detalhe(409, "conflito", exception.message)
+                is Duplicado -> Detalhe(409, "duplicado", exception.message)
+                is LoginDuplicado -> Detalhe(409, "login_duplicado", exception.message)
+                is Referenciado -> Detalhe(409, "referenciado", exception.message)
+                is CredenciaisInvalidas -> Detalhe(401, "credenciais_invalidas", exception.message)
+                is NaoAutenticado -> Detalhe(401, "nao_autenticado", exception.message)
+                is CsrfInvalido -> Detalhe(403, "csrf_invalido", exception.message)
+                is TrocaObrigatoria -> Detalhe(403, "troca_obrigatoria", exception.message)
+                is LimiteLoginExcedido -> Detalhe(429, "limite_login", exception.message)
+                is ErroInterno -> Detalhe(500, "erro_interno", exception.message)
+                is WebApplicationException -> Detalhe(
+                    exception.response.status,
+                    "requisicao_invalida",
+                    if (exception.response.status == 404) "Recurso não encontrado." else "Requisição inválida."
+                )
+                is IllegalArgumentException -> Detalhe(400, "validacao", "Dados inválidos.")
+                else -> Detalhe(500, "erro_interno", "Não foi possível concluir a operação.")
             }
-
-            is WebApplicationException -> Falha(
-                exception.response.status,
-                "requisicao_invalida",
-                if (exception.response.status == 404) "Recurso não encontrado." else "Requisição inválida."
-            )
-
-            is IllegalArgumentException -> Falha(400, "validacao", "Dados inválidos.")
-            else -> Falha(500, "erro_interno", "Não foi possível concluir a operação.")
+            if (detalhe.status == 500) logger.error("Falha ao processar requisição", exception)
+            return Response.status(detalhe.status).entity(ErroHttp(detalhe.codigo, detalhe.mensagem))
+                .type("application/json").build()
         }
-        if (falha.status == 500) Logger.getLogger(ErrosHttp::class.java)
-            .error("Falha ao processar requisição", exception)
-        return Response.status(falha.status).entity(ErroHttp(falha.codigo, falha.message))
-            .type("application/json").build()
     }
+
+    override fun toResponse(exception: Exception): Response = resposta(exception)
 }

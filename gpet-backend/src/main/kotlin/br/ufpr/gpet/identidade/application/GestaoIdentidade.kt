@@ -4,19 +4,9 @@ import br.ufpr.gpet.identidade.domain.*
 import br.ufpr.gpet.shared.domain.*
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
-import java.security.MessageDigest
-import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
-import java.util.Base64
 import java.util.UUID
-
-fun hashToken(token: String): String =
-    MessageDigest.getInstance("SHA-256").digest(token.toByteArray())
-        .joinToString("") { "%02x".format(it) }
-
-fun tokenAleatorio(): String = ByteArray(32).also { SecureRandom().nextBytes(it) }
-    .let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
 
 @ApplicationScoped
 
@@ -25,9 +15,20 @@ fun tokenAleatorio(): String = ByteArray(32).also { SecureRandom().nextBytes(it)
 class GestaoIdentidade(
     private val repositorio: RepositorioIdentidade,
     private val senhas: Senhas,
-    private val relogio: Clock
+    private val relogio: Clock,
+    private val tokens: Tokens,
 ) {
     private val hashFicticio = senhas.hash("credencial ficticia indisponivel")
+
+    fun usuarios(paginacao: Paginacao) = repositorio.usuarios(paginacao)
+
+    fun usuario(id: UUID) = repositorio.usuario(id) ?: ausente()
+
+    fun desativar(id: UUID, versao: Long, autor: UUID? = null): Usuario {
+        val atual = usuario(id)
+        return editar(id, atual.nome, atual.login, false, versao, autor)
+    }
+
     fun bootstrap(senha: String): Boolean {
         repositorio.bloquearAlteracoes()
         if (repositorio.totalUsuarios() != 0L) return false
@@ -39,11 +40,7 @@ class GestaoIdentidade(
         repositorio.bloquearAlteracoes()
         validarSenha(senha)
         val normalizado = normalizarLogin(login)
-        if (repositorio.porLogin(normalizado) != null) throw Falha(
-            409,
-            "login_duplicado",
-            "Login já cadastrado."
-        )
+        if (repositorio.porLogin(normalizado) != null) throw LoginDuplicado()
         return repositorio.salvar(
             Usuario(
                 UUID.randomUUID(),
@@ -70,11 +67,7 @@ class GestaoIdentidade(
         if (atual.versao != versao) conflito()
         val normalizado = normalizarLogin(login)
         val outro = repositorio.porLogin(normalizado)
-        if (outro != null && outro.id != id) throw Falha(
-            409,
-            "login_duplicado",
-            "Login já cadastrado."
-        )
+        if (outro != null && outro.id != id) throw LoginDuplicado()
         if (!ativo && atual.ativo) exigir(
             repositorio.ativos() > 1,
             "Não é possível desativar o último usuário ativo."
@@ -106,11 +99,7 @@ class GestaoIdentidade(
         repositorio.bloquearAlteracoes()
         validarSenha(novaSenha)
         val atual = repositorio.usuario(id) ?: ausente()
-        if (!atual.ativo || !senhas.confere(senhaAtual, atual.senhaHash)) throw Falha(
-            401,
-            "credenciais_invalidas",
-            "Credenciais inválidas."
-        )
+        if (!atual.ativo || !senhas.confere(senhaAtual, atual.senhaHash)) throw CredenciaisInvalidas()
         exigir(senhaAtual != novaSenha, "A nova senha deve ser diferente da senha atual.")
         repositorio.salvar(
             atual.copy(senhaHash = senhas.hash(novaSenha), trocarSenha = false),
@@ -125,16 +114,12 @@ class GestaoIdentidade(
         val usuario = repositorio.porLogin(normalizado)
         // Verificação fictícia de mesmo custo evita distinguir usuário inexistente pelo tempo do hash.
         val hash = usuario?.senhaHash ?: hashFicticio
-        if (!senhas.confere(senha, hash) || usuario == null || !usuario.ativo) throw Falha(
-            401,
-            "credenciais_invalidas",
-            "Credenciais inválidas."
-        )
-        val token = tokenAleatorio()
+        if (!senhas.confere(senha, hash) || usuario == null || !usuario.ativo) throw CredenciaisInvalidas()
+        val token = tokens.aleatorio()
         val sessao = Sessao(
-            hashToken(token),
+            tokens.hash(token),
             usuario.id,
-            tokenAleatorio(),
+            tokens.aleatorio(),
             relogio.instant().plus(Duration.ofHours(8))
         )
         repositorio.salvar(sessao)
@@ -142,20 +127,14 @@ class GestaoIdentidade(
     }
 
     fun autenticar(token: String?): Pair<Usuario, Sessao> {
-        if (token == null || token.length > 128) throw Falha(
-            401,
-            "nao_autenticado",
-            "Entre para continuar."
-        )
-        val sessao = repositorio.sessao(hashToken(token))
+        if (token == null || token.length > 128) throw NaoAutenticado("Entre para continuar.")
+        val sessao = repositorio.sessao(tokens.hash(token))
         val usuario = sessao?.let { repositorio.usuario(it.usuarioId) }
-        if (sessao == null || !sessao.validaEm(relogio.instant()) || usuario == null || !usuario.ativo) throw Falha(
-            401,
-            "nao_autenticado",
-            "Sessão expirada. Entre novamente."
-        )
+        if (sessao == null || !sessao.validaEm(relogio.instant()) || usuario == null || !usuario.ativo) {
+            throw NaoAutenticado("Sessão expirada. Entre novamente.")
+        }
         return usuario to sessao
     }
 
-    fun logout(token: String) = repositorio.revogar(hashToken(token))
+    fun logout(token: String) = repositorio.revogar(tokens.hash(token))
 }

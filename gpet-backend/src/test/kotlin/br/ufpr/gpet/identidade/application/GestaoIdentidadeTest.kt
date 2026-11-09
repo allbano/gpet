@@ -32,10 +32,16 @@ class SenhasMock : Senhas {
     override fun hash(senha: String) = "mock:$senha"
     override fun confere(senha: String, hash: String) = hash == hash(senha)
 }
+class TokensMock : Tokens {
+    private var sequencia = 0
+    override fun aleatorio() = "token-ficticio-${++sequencia}"
+    override fun hash(token: String) = "hash:$token"
+}
 class GestaoIdentidadeTest {
     private val repo = IdentidadeMock()
     private val agora = Instant.parse("2026-11-06T12:00:00Z")
-    private val gestao = GestaoIdentidade(repo,SenhasMock(),Clock.fixed(agora,ZoneOffset.UTC))
+    private val tokens = TokensMock()
+    private val gestao = GestaoIdentidade(repo,SenhasMock(),Clock.fixed(agora,ZoneOffset.UTC),tokens)
     private val senha = "senha ficticia de testes"
     @Test fun `bootstrap repetido preserva credencial existente`() {
         assertTrue(gestao.bootstrap(senha))
@@ -46,7 +52,7 @@ class GestaoIdentidadeTest {
     }
     @Test fun `rejeita login duplicado apos normalizacao`() {
         gestao.criar("Pessoa fictícia"," Pessoa ",senha)
-        assertEquals(409,assertThrows(Falha::class.java) { gestao.criar("Outra","PESSOA",senha) }.status)
+        assertThrows(LoginDuplicado::class.java) { gestao.criar("Outra","PESSOA",senha) }
     }
     @Test fun `impede desativar ultimo ativo`() {
         val u = gestao.criar("Pessoa fictícia","pessoa",senha)
@@ -65,9 +71,9 @@ class GestaoIdentidadeTest {
         gestao.bootstrap(senha)
         val login = gestao.login("admin",senha)
         assertFalse(repo.sessoes.containsKey(login.token))
-        assertTrue(repo.sessoes.containsKey(hashToken(login.token)))
+        assertTrue(repo.sessoes.containsKey(tokens.hash(login.token)))
         assertEquals(agora.plusSeconds(28800),login.sessao.expiraEm)
-        val futuro = GestaoIdentidade(repo,SenhasMock(),Clock.fixed(agora.plusSeconds(28800),ZoneOffset.UTC))
+        val futuro = GestaoIdentidade(repo,SenhasMock(),Clock.fixed(agora.plusSeconds(28800),ZoneOffset.UTC),tokens)
         assertThrows(Falha::class.java) { futuro.autenticar(login.token) }
     }
     @Test fun `logout revoga apenas sessao atual`() {
@@ -97,6 +103,6 @@ class GestaoIdentidadeTest {
     @Test fun `edicao desatualizada retorna conflito`() {
         gestao.bootstrap(senha); val u = repo.porLogin("admin")!!
         gestao.editar(u.id,"Outro nome",u.login,true,0)
-        assertEquals(409,assertThrows(Falha::class.java) { gestao.editar(u.id,"Nome antigo",u.login,true,0) }.status)
+        assertThrows(Conflito::class.java) { gestao.editar(u.id,"Nome antigo",u.login,true,0) }
     }
 }

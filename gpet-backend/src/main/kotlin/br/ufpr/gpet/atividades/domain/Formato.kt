@@ -15,3 +15,10 @@ data class Formato(
         texto(descricao, "Descrição")
     }
 }
+
+interface RepositorioFormatos {
+    fun formatos(paginacao: Paginacao, somenteAtivos: Boolean = false): Pagina<Formato>
+    fun formato(id: UUID): Formato?
+    fun salvar(formato: Formato, autor: UUID, novo: Boolean): Formato
+    fun excluirFormato(id: UUID, versao: Long, autor: UUID)
+}

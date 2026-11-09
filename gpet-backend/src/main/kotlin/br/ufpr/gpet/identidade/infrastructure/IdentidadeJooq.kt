@@ -4,7 +4,7 @@ import br.ufpr.gpet.generated.Tables.SESSOES
 import br.ufpr.gpet.generated.Tables.USUARIOS
 import br.ufpr.gpet.identidade.domain.*
 import br.ufpr.gpet.shared.domain.*
-import br.ufpr.gpet.shared.infrastructure.Banco
+import br.ufpr.gpet.shared.infrastructure.*
 import jakarta.enterprise.context.ApplicationScoped
 import org.jooq.Record
 import java.time.OffsetDateTime
@@ -25,26 +25,30 @@ class IdentidadeJooq(private val banco: Banco) : RepositorioIdentidade {
     )
 
     override fun bloquearAlteracoes() {
-        banco.sql.fetch("select pg_advisory_xact_lock(741923)")
+        persistencia { banco.sql.fetch("select pg_advisory_xact_lock(741923)") }
     }
 
-    override fun totalUsuarios() = banco.sql.fetchCount(USUARIOS).toLong()
-    override fun ativos() = banco.sql.fetchCount(USUARIOS, USUARIOS.ATIVO.isTrue).toLong()
-    override fun usuarios(paginacao: Paginacao) = Pagina(
-        banco.sql.selectFrom(USUARIOS).orderBy(USUARIOS.LOGIN, USUARIOS.ID).limit(paginacao.tamanho)
-            .offset(paginacao.offset).fetch().map(::usuario),
-        totalUsuarios(),
-        paginacao.pagina,
-        paginacao.tamanho
-    )
+    override fun totalUsuarios() = persistencia { banco.sql.fetchCount(USUARIOS).toLong() }
+    override fun ativos() = persistencia { banco.sql.fetchCount(USUARIOS, USUARIOS.ATIVO.isTrue).toLong() }
+    override fun usuarios(paginacao: Paginacao) = persistencia {
+        Pagina(
+            banco.sql.selectFrom(USUARIOS).orderBy(USUARIOS.LOGIN, USUARIOS.ID).limit(paginacao.tamanho)
+                .offset(paginacao.offset).fetch().map(::usuario),
+            totalUsuarios(),
+            paginacao.pagina,
+            paginacao.tamanho
+        )
+    }
 
-    override fun usuario(id: UUID) =
+    override fun usuario(id: UUID) = persistencia {
         banco.sql.selectFrom(USUARIOS).where(USUARIOS.ID.eq(id)).fetchOne()?.let(::usuario)
+    }
 
-    override fun porLogin(login: String) =
+    override fun porLogin(login: String) = persistencia {
         banco.sql.selectFrom(USUARIOS).where(USUARIOS.LOGIN.eq(login)).fetchOne()?.let(::usuario)
+    }
 
-    override fun salvar(usuario: Usuario, novo: Boolean, autor: UUID?): Usuario {
+    override fun salvar(usuario: Usuario, novo: Boolean, autor: UUID?): Usuario = persistencia {
         val u = usuario
         if (novo) banco.sql.insertInto(USUARIOS).set(USUARIOS.ID, u.id)
             .set(USUARIOS.CRIADO_POR, autor ?: u.id).set(USUARIOS.ATUALIZADO_POR, autor ?: u.id)
@@ -62,16 +66,17 @@ class IdentidadeJooq(private val banco: Banco) : RepositorioIdentidade {
         return usuario(u.id) ?: ausente()
     }
 
-    override fun salvar(sessao: Sessao) {
+    override fun salvar(sessao: Sessao) = persistencia {
         banco.sql.deleteFrom(SESSOES)
             .where(SESSOES.EXPIRA_EM.le(OffsetDateTime.now(ZoneOffset.UTC))).execute()
         banco.sql.insertInto(SESSOES).set(SESSOES.TOKEN_HASH, sessao.tokenHash)
             .set(SESSOES.USUARIO_ID, sessao.usuarioId).set(SESSOES.CSRF_TOKEN, sessao.csrfToken)
             .set(SESSOES.EXPIRA_EM, OffsetDateTime.ofInstant(sessao.expiraEm, ZoneOffset.UTC))
             .execute()
+        Unit
     }
 
-    override fun sessao(hash: String) =
+    override fun sessao(hash: String) = persistencia {
         banco.sql.selectFrom(SESSOES).where(SESSOES.TOKEN_HASH.eq(hash)).fetchOne()?.let {
             Sessao(
                 it.tokenHash!!,
@@ -80,12 +85,13 @@ class IdentidadeJooq(private val banco: Banco) : RepositorioIdentidade {
                 it.expiraEm!!.toInstant()
             )
         }
+    }
 
     override fun revogar(hash: String) {
-        banco.sql.deleteFrom(SESSOES).where(SESSOES.TOKEN_HASH.eq(hash)).execute()
+        persistencia { banco.sql.deleteFrom(SESSOES).where(SESSOES.TOKEN_HASH.eq(hash)).execute() }
     }
 
     override fun revogarUsuario(id: UUID) {
-        banco.sql.deleteFrom(SESSOES).where(SESSOES.USUARIO_ID.eq(id)).execute()
+        persistencia { banco.sql.deleteFrom(SESSOES).where(SESSOES.USUARIO_ID.eq(id)).execute() }
     }
 }
