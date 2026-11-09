@@ -82,4 +82,65 @@ abstract class ContratoHttp {
         given().cookie("GPET_SESSION",cookie).header("X-CSRF-Token",csrf).delete("/api/v1/admin/usuarios/$conta?versao=1").then().log().ifValidationFails().statusCode(200)
         given().cookie("GPET_SESSION",nova.cookie("GPET_SESSION")).get("/api/v1/auth/sessao").then().log().ifValidationFails().statusCode(401)
     }
+
+    @Test fun `erros jaxrs preservam o contrato de requisicao invalida`() {
+        given().get("/api/v1/rota-inexistente").then().statusCode(404)
+            .body("codigo", equalTo("requisicao_invalida"))
+            .body("mensagem", equalTo("Recurso não encontrado."))
+        given().get("/api/v1/public/atividades?tamanho=abc").then().statusCode(404)
+            .body("codigo", equalTo("requisicao_invalida"))
+            .body("mensagem", equalTo("Recurso não encontrado."))
+    }
+
+    @Test fun `filtros preservam limites e espacos extremos`() {
+        given().get("/api/v1/public/atividades?pagina=1000000").then().statusCode(200)
+        given().get("/api/v1/public/atividades?pagina=1000001").then().statusCode(400)
+        given().queryParam("titulo", " ".repeat(301)).get("/api/v1/public/atividades").then().statusCode(200)
+        given().queryParam("titulo", " " + "a".repeat(300)).get("/api/v1/public/atividades").then().statusCode(400)
+        given().get("/api/v1/public/categorias?natureza=invalida").then().statusCode(400)
+        val (cookie, _) = login()
+        given().cookie("GPET_SESSION", cookie).get("/api/v1/admin/categorias?natureza=invalida").then().statusCode(400)
+    }
+
+    @Test fun `payload invalido precede id ausente e versao desatualizada`() {
+        val (cookie, csrf) = login()
+        fun requisicao() = given().cookie("GPET_SESSION", cookie).header("X-CSRF-Token", csrf)
+            .contentType(ContentType.JSON)
+        val dados = mutableMapOf<String, Any?>(
+            "natureza" to "formativa",
+            "categoriaId" to "20000000-0000-0000-0000-000000000003",
+            "formatoId" to "10000000-0000-0000-0000-000000000001",
+            "titulo" to "", "descricao" to "Formação fictícia", "objetivo" to null,
+            "cargaHoraria" to "20 horas", "inicio" to "2026-11-01", "fim" to "2026-11-02",
+            "publicoAlvo" to "Docentes", "versao" to 0
+        )
+        requisicao().body(dados).put("/api/v1/admin/atividades/${UUID.randomUUID()}").then().statusCode(400)
+        dados["titulo"] = "Curso fictício"
+        val id = requisicao().body(dados).post("/api/v1/admin/atividades").then().statusCode(200).extract().path<String>("id")
+        requisicao().body(dados).put("/api/v1/admin/atividades/$id").then().statusCode(200)
+        dados["titulo"] = ""
+        requisicao().body(dados).put("/api/v1/admin/atividades/$id").then().statusCode(400)
+        dados["titulo"] = "Curso fictício"
+        requisicao().body(dados).delete("/api/v1/admin/atividades/$id?versao=1").then().statusCode(204)
+    }
+
+    @Test fun `cookie de sessao preserva atributos e limpeza`() {
+        val entrada = given().contentType(ContentType.JSON).header("X-GPET-Request", "1")
+            .body(mapOf("login" to "aceite", "senha" to "senha ficticia de aceite"))
+            .post("/api/v1/auth/login").then().statusCode(200).extract()
+        val cookieSessao = entrada.header("Set-Cookie")
+        assert(cookieSessao.contains("Path=/"))
+        assert(cookieSessao.contains("HttpOnly"))
+        assert(cookieSessao.contains("SameSite=Lax"))
+        assert(cookieSessao.contains("Max-Age=28800"))
+        assert(!cookieSessao.contains("Secure"))
+        val cookieLimpo = given().cookie("GPET_SESSION", entrada.cookie("GPET_SESSION"))
+            .header("X-CSRF-Token", entrada.path<String>("csrfToken"))
+            .contentType(ContentType.JSON).body("{}").post("/api/v1/auth/logout")
+            .then().statusCode(204).extract().header("Set-Cookie")
+        assert(cookieLimpo.contains("Max-Age=0"))
+        assert(cookieLimpo.contains("Path=/"))
+        assert(cookieLimpo.contains("HttpOnly"))
+        assert(cookieLimpo.contains("SameSite=Lax"))
+    }
 }

@@ -5,7 +5,7 @@ import br.ufpr.gpet.generated.Tables.CATEGORIAS_ATIVIDADE
 import br.ufpr.gpet.generated.Tables.FORMATOS_ATIVIDADE
 import br.ufpr.gpet.atividades.domain.*
 import br.ufpr.gpet.shared.domain.*
-import br.ufpr.gpet.shared.infrastructure.Banco
+import br.ufpr.gpet.shared.infrastructure.*
 import jakarta.enterprise.context.ApplicationScoped
 import org.jooq.Condition
 import org.jooq.Record
@@ -18,7 +18,7 @@ import java.util.UUID
 
 @ApplicationScoped
 
-class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
+class AtividadesJooq(private val banco: Banco) : RepositorioAtividades, RepositorioCategorias, RepositorioFormatos {
     private val c = CATEGORIAS_ATIVIDADE
     private val f = FORMATOS_ATIVIDADE
     private val a = ATIVIDADES
@@ -70,20 +70,20 @@ class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
         paginacao: Paginacao,
         natureza: String?,
         somenteAtivas: Boolean
-    ): Pagina<Categoria> {
+    ): Pagina<Categoria> = persistencia {
         var condicao = DSL.noCondition()
         if (natureza != null) {
-            validarNatureza(natureza)
             condicao = condicao.and(c.NATUREZA.eq(natureza))
         }
         if (somenteAtivas) condicao = condicao.and(c.ATIVO.isTrue)
         return listar(c, paginacao, condicao, listOf(c.NOME.asc(), c.ID.asc()), ::categoria)
     }
 
-    override fun categoria(id: UUID) =
+    override fun categoria(id: UUID) = persistencia {
         banco.sql.selectFrom(c).where(c.ID.eq(id)).fetchOne()?.let(::categoria)
+    }
 
-    override fun salvar(categoria: Categoria, autor: UUID, nova: Boolean): Categoria {
+    override fun salvar(categoria: Categoria, autor: UUID, nova: Boolean): Categoria = persistencia {
         val item = categoria
         if (nova) banco.sql.insertInto(c).set(c.ID, item.id).set(c.NATUREZA, item.natureza)
             .set(c.NOME, item.nome.trim()).set(c.DESCRICAO, item.descricao).set(c.ATIVO, item.ativo)
@@ -135,21 +135,25 @@ class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
         else banco.sql.execute("delete from $tabela where id=?", id)
     }
 
-    override fun excluirCategoria(id: UUID, versao: Long, autor: UUID) =
+    override fun excluirCategoria(id: UUID, versao: Long, autor: UUID) = persistencia {
         excluirCatalogo("categorias_atividade", "categoria_id", id, versao, autor)
+    }
 
-    override fun formatos(paginacao: Paginacao, somenteAtivos: Boolean) = listar(
-        f,
-        paginacao,
-        if (somenteAtivos) f.ATIVO.isTrue else DSL.noCondition(),
-        listOf(f.NOME.asc(), f.ID.asc()),
-        ::formato
-    )
+    override fun formatos(paginacao: Paginacao, somenteAtivos: Boolean) = persistencia {
+        listar(
+            f,
+            paginacao,
+            if (somenteAtivos) f.ATIVO.isTrue else DSL.noCondition(),
+            listOf(f.NOME.asc(), f.ID.asc()),
+            ::formato
+        )
+    }
 
-    override fun formato(id: UUID) =
+    override fun formato(id: UUID) = persistencia {
         banco.sql.selectFrom(f).where(f.ID.eq(id)).fetchOne()?.let(::formato)
+    }
 
-    override fun salvar(formato: Formato, autor: UUID, novo: Boolean): Formato {
+    override fun salvar(formato: Formato, autor: UUID, novo: Boolean): Formato = persistencia {
         val item = formato
         if (novo) banco.sql.insertInto(f).set(f.ID, item.id).set(f.NOME, item.nome.trim())
             .set(f.DESCRICAO, item.descricao).set(f.ATIVO, item.ativo).set(f.CRIADO_POR, autor)
@@ -166,19 +170,18 @@ class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
         return formato(item.id) ?: ausente()
     }
 
-    override fun excluirFormato(id: UUID, versao: Long, autor: UUID) =
+    override fun excluirFormato(id: UUID, versao: Long, autor: UUID) = persistencia {
         excluirCatalogo("formatos_atividade", "formato_id", id, versao, autor)
+    }
 
-    override fun atividades(paginacao: Paginacao, filtro: FiltroAtividade): Pagina<Atividade> {
+    override fun atividades(paginacao: Paginacao, filtro: FiltroAtividade): Pagina<Atividade> = persistencia {
         var condicao = a.EXCLUIDA.isFalse
         filtro.natureza?.let {
-            validarNatureza(it)
             condicao = condicao.and(a.NATUREZA.eq(it))
         }
         filtro.categoriaId?.let { condicao = condicao.and(a.CATEGORIA_ID.eq(it)) }
         filtro.formatoId?.let { condicao = condicao.and(a.FORMATO_ID.eq(it)) }
         filtro.titulo?.takeIf { it.isNotBlank() }?.let {
-            exigir(it.length <= 300, "Filtro de título muito longo.")
             condicao =
                 condicao.and(
                     DSL.lower(a.TITULO).contains(it.trim().lowercase(java.util.Locale.ROOT))
@@ -187,11 +190,12 @@ class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
         return listar(a, paginacao, condicao, listOf(a.INICIO.desc(), a.ID.asc()), ::atividade)
     }
 
-    override fun atividade(id: UUID) =
+    override fun atividade(id: UUID) = persistencia {
         banco.sql.selectFrom(a).where(a.ID.eq(id).and(a.EXCLUIDA.isFalse)).fetchOne()
             ?.let(::atividade)
+    }
 
-    override fun salvar(atividade: Atividade, autor: UUID, nova: Boolean): Atividade {
+    override fun salvar(atividade: Atividade, autor: UUID, nova: Boolean): Atividade = persistencia {
         val item = atividade
         if (nova) banco.sql.insertInto(a).set(a.ID, item.id).set(a.NATUREZA, item.natureza)
             .set(a.CATEGORIA_ID, item.categoriaId).set(a.FORMATO_ID, item.formatoId)
@@ -214,7 +218,7 @@ class AtividadesJooq(private val banco: Banco) : RepositorioAtividades {
         return atividade(item.id) ?: ausente()
     }
 
-    override fun excluirAtividade(id: UUID, versao: Long, autor: UUID) {
+    override fun excluirAtividade(id: UUID, versao: Long, autor: UUID) = persistencia {
         if (atividade(id) == null) ausente()
         if (banco.sql.update(a).set(a.EXCLUIDA, true).set(a.VERSAO, a.VERSAO.plus(1))
                 .set(a.ATUALIZADO_EM, OffsetDateTime.now(ZoneOffset.UTC))

@@ -53,19 +53,6 @@ data class Atividade(
 }
 
 interface RepositorioAtividades {
-    fun categorias(
-        paginacao: Paginacao,
-        natureza: String? = null,
-        somenteAtivas: Boolean = false
-    ): Pagina<Categoria>
-
-    fun categoria(id: UUID): Categoria?
-    fun salvar(categoria: Categoria, autor: UUID, nova: Boolean): Categoria
-    fun excluirCategoria(id: UUID, versao: Long, autor: UUID)
-    fun formatos(paginacao: Paginacao, somenteAtivos: Boolean = false): Pagina<Formato>
-    fun formato(id: UUID): Formato?
-    fun salvar(formato: Formato, autor: UUID, novo: Boolean): Formato
-    fun excluirFormato(id: UUID, versao: Long, autor: UUID)
     fun atividades(paginacao: Paginacao, filtro: FiltroAtividade): Pagina<Atividade>
     fun atividade(id: UUID): Atividade?
     fun salvar(atividade: Atividade, autor: UUID, nova: Boolean): Atividade

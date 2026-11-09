@@ -2,7 +2,7 @@ package br.ufpr.gpet.aceite
 
 import br.ufpr.gpet.identidade.application.GestaoIdentidade
 import br.ufpr.gpet.identidade.domain.RepositorioIdentidade
-import br.ufpr.gpet.shared.domain.Falha
+import br.ufpr.gpet.shared.domain.*
 import br.ufpr.gpet.shared.infrastructure.Banco
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
@@ -30,7 +30,7 @@ class IdentidadeConcorrenteTest {
         assertEquals(persistido, repositorio.usuario(original.id))
         assertEquals(original.id, gestao.login("admin", definitiva).usuario.id)
         assertFalse(repositorio.usuario(original.id)!!.trocarSenha)
-        assertEquals(401, assertThrows(Falha::class.java) { gestao.login("admin", inicial) }.status)
+        assertThrows(CredenciaisInvalidas::class.java) { gestao.login("admin", inicial) }
     }
 
     @Test fun `bootstrap concorrente e desativacoes preservam exatamente uma conta ativa`() {
@@ -44,7 +44,7 @@ class IdentidadeConcorrenteTest {
             val primeiro = gestao.login("admin",senha).usuario
             val segundo = gestao.criar("Segunda conta fictícia","segunda",senha)
             val resultados = pool.invokeAll(listOf(primeiro,segundo).map { usuario -> Callable {
-                try { gestao.editar(usuario.id,usuario.nome,usuario.login,false,usuario.versao); 200 } catch(f: Falha) { f.status }
+                try { gestao.editar(usuario.id,usuario.nome,usuario.login,false,usuario.versao); 200 } catch(f: Validacao) { 400 }
             } }).map { it.get() }
             assertEquals(listOf(200,400),resultados.sorted()); assertEquals(1L,repositorio.ativos())
         }
