@@ -1,15 +1,14 @@
 package br.ufpr.gpet.identidade.presentation
 
-import br.ufpr.gpet.shared.domain.*
-import jakarta.ws.rs.*
-import jakarta.ws.rs.core.*
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.util.UUID
 
+@Schema(description = "Conta sem hash de senha ou dados de sessão.")
 data class UsuarioDto(
-    val id: UUID,
-    val nome: String,
-    val login: String,
-    val ativo: Boolean,
-    val trocarSenha: Boolean,
-    val versao: Long,
+    @field:Schema(format = "uuid", required = true) val id: UUID,
+    @field:Schema(maxLength = 200, required = true) val nome: String,
+    @field:Schema(maxLength = 100, required = true) val login: String,
+    @field:Schema(required = true) val ativo: Boolean,
+    @field:Schema(description = "Indica que a senha temporária precisa ser trocada.", required = true) val trocarSenha: Boolean,
+    @field:Schema(description = "Versão para concorrência otimista.", minimum = "0", required = true) val versao: Long,
 )

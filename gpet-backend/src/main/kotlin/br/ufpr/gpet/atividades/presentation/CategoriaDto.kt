@@ -1,15 +1,14 @@
 package br.ufpr.gpet.atividades.presentation
 
-import br.ufpr.gpet.atividades.domain.*
-import br.ufpr.gpet.shared.domain.*
-import jakarta.ws.rs.*
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.util.UUID
 
+@Schema(description = "Categoria administrativa com estado e versão.")
 data class CategoriaDto(
-    val id: UUID,
-    val natureza: String,
-    val nome: String,
-    val descricao: String,
-    val ativo: Boolean,
-    val versao: Long,
+    @field:Schema(format = "uuid", required = true) val id: UUID,
+    @field:Schema(enumeration = ["informativa", "formativa"], required = true) val natureza: String,
+    @field:Schema(maxLength = 200, required = true) val nome: String,
+    @field:Schema(maxLength = 10000, required = true) val descricao: String,
+    @field:Schema(required = true) val ativo: Boolean,
+    @field:Schema(description = "Versão para concorrência otimista.", minimum = "0", required = true) val versao: Long,
 )

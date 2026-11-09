@@ -1,6 +1,9 @@
 package br.ufpr.gpet.identidade.presentation
 
-import br.ufpr.gpet.shared.domain.*
-import jakarta.ws.rs.*
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 
-data class RedefinirSenhaEntrada(val senhaTemporaria: String, val versao: Long)
+@Schema(description = "Redefinição administrativa para uma senha temporária.")
+data class RedefinirSenhaEntrada(
+    @field:Schema(format = "password", minLength = 8, maxLength = 64, required = true) val senhaTemporaria: String,
+    @field:Schema(description = "Versão para concorrência otimista.", minimum = "0", required = true) val versao: Long,
+)
