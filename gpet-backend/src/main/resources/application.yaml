@@ -1,0 +1,68 @@
+quarkus:
+  datasource:
+    db-kind: postgresql
+    username: "${GPET_DB_USER:gpet}"
+    password: "${GPET_DB_PASSWORD:gpet-dev-only}"
+    devservices:
+      image-name: postgres:18.6-alpine
+  jooq:
+    dialect: POSTGRES
+  flyway:
+    migrate-at-start: false
+  http:
+    limits:
+      max-body-size: 64K
+    proxy:
+      proxy-address-forwarding: false
+  log:
+    console:
+      json:
+        enabled: true
+  native:
+    resources:
+      includes: db/migration/*.sql
+
+"%prod":
+  quarkus:
+    datasource:
+      jdbc:
+        url: "${GPET_DB_URL}"
+      password: "${GPET_DB_PASSWORD}"
+    http:
+      access-log:
+        enabled: true
+    smallrye-openapi:
+      enabled: false
+    swagger-ui:
+      enabled: false
+  gpet:
+    cookie-secure: "${GPET_COOKIE_SECURE:true}"
+
+"%dev":
+  quarkus:
+    datasource:
+      jdbc:
+        url: "${GPET_DB_URL:jdbc:postgresql://localhost:5432/gpet}"
+    flyway:
+      migrate-at-start: true
+    log:
+      console:
+        json:
+          enabled: false
+  gpet:
+    cookie-secure: false
+
+"%test":
+  quarkus:
+    datasource:
+      devservices:
+        enabled: false
+        reuse: false
+    flyway:
+      migrate-at-start: true
+    log:
+      console:
+        json:
+          enabled: false
+  gpet:
+    cookie-secure: false
