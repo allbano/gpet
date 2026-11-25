@@ -1,3 +1,6 @@
+# PASTA DE AGENTES
+.codex/
+
 # Diretório de saída do Cargo (builds, binários e dependências compiladas)
 target/
 
