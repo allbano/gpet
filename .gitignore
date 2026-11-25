@@ -1,1 +1,40 @@
+# Diretório de saída do Cargo (builds, binários e dependências compiladas)
+target/
+
+# Arquivos de backup gerados pelo rustfmt ou editores
+**/*.rs.bk
+
+# Arquivos de configuração de IDEs e editores comuns
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de variáveis de ambiente locais
+.env
+.env.local
+# Diretório de saída do Cargo (builds, binários e dependências compiladas)
+/target/
+
+# Arquivos de backup gerados pelo rustfmt ou editores
+**/*.rs.bk
+
+# Arquivos de configuração de IDEs e editores comuns
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de variáveis de ambiente locais
+.env
+.env.local
