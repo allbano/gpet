@@ -1,0 +1,22 @@
+{
+  "/public": {
+    "target": "http://127.0.0.1:55569",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/private": {
+    "target": "http://127.0.0.1:55569",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/health": {
+    "target": "http://127.0.0.1:55569",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/ready": {
+    "target": "http://127.0.0.1:55569",
+    "secure": false,
+    "changeOrigin": false
+  }
+}
