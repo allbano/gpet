@@ -1,0 +1,247 @@
+@startuml sequencia_backend_gpet
+title Diagrama de Sequência — Fluxos do Backend GPET (Mapeamento Idiomático para Rust)
+
+autonumber
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName SansSerif
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+skinparam sequence {
+  ArrowColor #37474F
+  LifeLineBorderColor #546E7A
+  ParticipantBorderColor #37474F
+  ParticipantBackgroundColor #ECEFF1
+  ActorBorderColor #263238
+  ActorBackgroundColor #CFD8DC
+  DatabaseBorderColor #1B5E20
+  DatabaseBackgroundColor #E8F5E9
+  DividerBackgroundColor #E3F2FD
+  DividerBorderColor #1976D2
+  GroupBackgroundColor #FAFAFA
+  GroupBorderColor #78909C
+}
+
+actor "Cliente HTTP\n(Visitante / Gestor / Monitor)" as Cliente
+participant "GatewayGpet" as Gateway <<struct : impl ProxyHttp>>
+participant "rotas / sondas" as ModGw <<mod (fn livres)>>
+participant "http" as Http <<mod : Axum handlers>>
+participant "aplicacao / consultas" as Aplicacao <<mod : async fn>>
+participant "Domínio\n(Atividade* / Periodo / Horario)" as Dominio <<struct + impl>>
+participant "repositorio" as Repo <<mod : impl Executor>>
+database "PostgreSQL 18\n(schema gpet)" as Pg <<PgPool / Transaction>>
+
+note over Gateway, Repo
+  <b>Convenção Rust → PlantUML:</b>
+  • ""<<struct : impl Trait>>"" e ""<<struct + impl>>"": tipos com estado e métodos (""&self"", ""&mut self"" ou <i>move</i> de ""self"").
+  • ""<<mod (fn livres)>>"": módulos Rust que agrupam funções puras / ""async fn"" sem instanciar classes.
+  • Erros trafegam como ""Result<T, Erro>"" e viram resposta HTTP via ""impl IntoResponse for Erro"".
+end note
+
+' =============================================================================
+== Fluxo 1: Editar e Publicar Atividade (PATCH /private/{modulo}/atividades/{id}) ==
+' =============================================================================
+
+Cliente -> Gateway : PATCH /private/formativas/atividades/{id}\nJSON(Edicao { publicacao_publica: Some(true), ... })
+activate Gateway
+
+Gateway -> Gateway : new_ctx() -> ContextoRequisicao
+Gateway -> ModGw : rotas::classificar_requisicao("PATCH", caminho)
+activate ModGw
+ModGw --> Gateway : DecisaoRoteamento::Atender(\n  AcaoRota::Encaminhar { modulo, caminho_destino,\n  mapeamento_localizacao })
+deactivate ModGw
+
+note right of Gateway
+  ""request_filter()"" grava ""ctx"" e retorna ""Ok(false)"".
+  ""upstream_peer()"" resolve DNS (""lookup_host"") -> ""HttpPeer"".
+  ""upstream_request_filter()"" reescreve URI para
+  ""/api/v1/formativas/interno/atividades/{id}"" e injeta
+  ""X-Forwarded-*"" e ""Host"".
+end note
+
+Gateway -> Http : PATCH /api/v1/formativas/interno/atividades/{id}\nState(db: PgPool), Path(id: Uuid), Json(edicao: Edicao)
+activate Http
+
+Http -> Aplicacao : aplicacao::editar_atividade(&db, id, edicao).await
+activate Aplicacao
+
+Aplicacao -> Pg : db.begin().await (BEGIN)
+Pg --> Aplicacao : Transaction<Postgres>
+
+Aplicacao -> Repo : repositorio::bloquear_cadastro(&mut tx, id).await
+activate Repo
+Repo -> Pg : SELECT ... FROM gpet.atividade\nWHERE id = $1 FOR UPDATE
+Pg --> Repo : Result<Cadastro, sqlx::Error>
+Repo --> Aplicacao : Result<Cadastro, Erro>
+deactivate Repo
+
+alt Err(Erro::Ausente) — registro não encontrado (RowNotFound)
+  Aplicacao --> Http : Err(Erro::Ausente)\n(drop de tx executa ROLLBACK implícito)
+  Http --> Gateway : 404 Not Found\n{"mensagem": "Recurso não encontrado"}\n[impl IntoResponse for Erro]
+  Gateway --> Cliente : 404 Not Found
+else Ok(cadastro: Cadastro)
+  Aplicacao -> Dominio : AtividadeFormativa::nova(cadastro)\n(ou AtividadeInformativa::nova no módulo informativo)
+  activate Dominio
+  Dominio --> Aplicacao : Ok(atividade)
+
+  Aplicacao -> Dominio : atividade.editar(edicao)\n[move de self -> valida campos e carga horária]
+  opt publicacao_publica == true
+    Dominio -> Dominio : publicar(&mut self)\n[exige conteudo não vazio]
+  end
+  Dominio --> Aplicacao : Result<AtividadeFormativa, &'static str>
+  deactivate Dominio
+
+  alt Err(msg) — violação de invariante de domínio
+    Aplicacao --> Http : Err(Erro::Regra(msg)) [via impl From<&str>]\n(drop de tx executa ROLLBACK)
+    Http --> Gateway : 422 Unprocessable Entity\n{"mensagem": msg}
+    Gateway --> Cliente : 422 Unprocessable Entity
+  else Ok(atividade_editada)
+    Aplicacao -> Repo : repositorio::salvar_atividade(\n  &mut *tx, Some(id), &atividade_editada).await
+    activate Repo
+    Repo -> Pg : UPDATE gpet.atividade SET ... WHERE id = $10 RETURNING id
+    Pg --> Repo : Ok(id)
+    Repo --> Aplicacao : Ok(id)
+    deactivate Repo
+
+    Aplicacao -> Pg : tx.commit().await (COMMIT)
+    Pg --> Aplicacao : Ok(())
+
+    Aplicacao --> Http : Ok(())
+    Http --> Gateway : 204 No Content
+    Gateway --> Cliente : 204 No Content
+  end
+end
+
+deactivate Aplicacao
+deactivate Http
+deactivate Gateway
+
+' =============================================================================
+== Fluxo 2: Adicionar Sessão à Programação + Reescrita de Location (POST .../periodos) ==
+' =============================================================================
+
+Cliente -> Gateway : POST /private/formativas/atividades/{id}/periodos\nJSON(Horario { inicio, termino, fuso })
+activate Gateway
+
+Gateway -> ModGw : rotas::classificar_requisicao("POST", caminho)
+activate ModGw
+ModGw --> Gateway : Encaminhar(\n  "/api/v1/formativas/interno/atividades/{id}/periodos",\n  MapeamentoLocalizacao { interno, externo })
+deactivate ModGw
+
+Gateway -> Http : POST /api/v1/formativas/interno/atividades/{id}/periodos
+activate Http
+
+Http -> Aplicacao : aplicacao::alterar_programacao(\n  &db, id, MudancaHorario::Adicionar(horario)).await
+activate Aplicacao
+
+Aplicacao -> Pg : BEGIN +\nSELECT id FROM gpet.atividade WHERE id = $1 FOR UPDATE
+Pg --> Aplicacao : Ok(id)
+
+Aplicacao -> Dominio : horario.validar(&self)
+activate Dominio
+Dominio --> Aplicacao : Result<(), &'static str>
+deactivate Dominio
+
+alt Err(msg) — termino <= inicio ou fuso vazio
+  Aplicacao --> Http : Err(Erro::Regra(msg))\n(drop de tx executa ROLLBACK)
+  Http --> Gateway : 422 Unprocessable Entity
+  Gateway --> Cliente : 422 Unprocessable Entity
+else Ok(()) — horário válido
+  Aplicacao -> Pg : INSERT INTO gpet.sessao (atividade_id, periodo, fuso)\nVALUES ($1, tstzrange($2, $3, '[)'), $4) RETURNING id
+  Pg --> Aplicacao : Ok(sessao_id: Uuid)
+
+  Aplicacao -> Pg : UPDATE gpet.atividade\nSET updated_at = statement_timestamp() WHERE id = $1
+  Aplicacao -> Pg : tx.commit().await (COMMIT)
+  Pg --> Aplicacao : Ok(())
+
+  Aplicacao --> Http : Ok(sessao_id)
+  Http --> Gateway : 201 Created\nLocation: /api/v1/formativas/interno/atividades/{id}/periodos/{sessao_id}\nJSON(Identificador { id: sessao_id })
+
+  opt upstream_response_filter() encontra cabeçalho Location
+    Gateway -> Gateway : reescrever prefixo interno -> externo\nLocation: /private/formativas/atividades/{id}/periodos/{sessao_id}
+  end
+
+  Gateway --> Cliente : 201 Created\nLocation: /private/formativas/atividades/{id}/periodos/{sessao_id}
+end
+
+deactivate Aplicacao
+deactivate Http
+deactivate Gateway
+
+' =============================================================================
+== Fluxo 3: Consulta Pública Paginada por Cursor (GET /public/{modulo}/atividades) ==
+' =============================================================================
+
+Cliente -> Gateway : GET /public/informativas/atividades?limite=20&cursor=...
+activate Gateway
+
+Gateway -> ModGw : rotas::classificar_requisicao("GET", caminho)
+activate ModGw
+ModGw --> Gateway : Encaminhar("/api/v1/informativas/atividades", ...)
+deactivate ModGw
+
+Gateway -> Http : GET /api/v1/informativas/atividades?limite=20&cursor=...
+activate Http
+
+Http -> Aplicacao : consultas::cartoes(&db, p: Paginacao, publica: true).await
+activate Aplicacao
+
+Aplicacao -> Aplicacao : p.limite(&self) & p.posicao(&self)\n[valida 1..=100 e formato "RFC3339|UUID"]
+
+alt Err(Erro::Parametro(msg)) — limite ou cursor inválido
+  Aplicacao --> Http : Err(Erro::Parametro(msg))
+  Http --> Gateway : 400 Bad Request {"mensagem": msg}
+  Gateway --> Cliente : 400 Bad Request
+else Ok((limite, posicao))
+  Aplicacao -> Pg : QueryBuilder<Postgres>:\nSELECT a.*, c.nome FROM gpet.atividade a\nJOIN gpet.classificacao c ...\nWHERE a.publicacao_publica AND (created_at, id) < ($1, $2)\nORDER BY created_at DESC, id DESC LIMIT limite + 1
+  Pg --> Aplicacao : Vec<Cartao>
+
+  Aplicacao -> Aplicacao : pagina(itens, limite, chave)\n-> Pagina<Cartao> { itens, proximo_cursor }
+  Aplicacao --> Http : Ok(Pagina<Cartao>)
+  Http --> Gateway : 200 OK JSON(Pagina<Cartao>)
+  Gateway --> Cliente : 200 OK JSON(Pagina<Cartao>)
+end
+
+deactivate Aplicacao
+deactivate Http
+deactivate Gateway
+
+' =============================================================================
+== Fluxo 4: Sonda de Prontidão Agregada do Gateway (GET /ready) ==
+' =============================================================================
+
+Cliente -> Gateway : GET /ready
+activate Gateway
+
+Gateway -> ModGw : rotas::classificar_requisicao("GET", "/ready")
+activate ModGw
+ModGw --> Gateway : Atender(AcaoRota::SondaProntidaoGateway)
+deactivate ModGw
+
+Gateway -> ModGw : sondas::verificar_prontidao_completa(\n  destino_formativas, destino_informativas).await
+activate ModGw
+
+par tokio::join! — Sonda paralela (timeout 3s por módulo)
+  ModGw -> Http : [Formativas] TCP GET /ready
+  Http -> Pg : SELECT 1 (DB Formativas)
+  Pg --> Http : Ok / Err
+  Http --> ModGw : HTTP 200 / 503
+else
+  ModGw -> Http : [Informativas] TCP GET /ready
+  Http -> Pg : SELECT 1 (DB Informativas)
+  Pg --> Http : Ok / Err
+  Http --> ModGw : HTTP 200 / 503
+end
+
+ModGw --> Gateway : bool (ambos_prontos)
+deactivate ModGw
+
+alt pronto == true
+  Gateway --> Cliente : 200 OK (corpo vazio)
+else pronto == false
+  Gateway --> Cliente : 503 Service Unavailable\n{"mensagem": "Serviços de atividades indisponíveis"}
+end
+deactivate Gateway
+
+@enduml

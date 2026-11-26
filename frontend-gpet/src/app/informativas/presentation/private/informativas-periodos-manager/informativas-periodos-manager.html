@@ -1,0 +1,190 @@
+<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Períodos de Lançamento / Divulgação</h2>
+      <p class="mt-0.5 text-sm text-slate-600">
+        Opcional para materiais contínuos; adicione períodos para registrar lançamentos ou exibições.
+      </p>
+    </div>
+    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+      {{ periodos().length }} {{ periodos().length === 1 ? 'período' : 'períodos' }}
+    </span>
+  </div>
+
+  @if (facade.erroPeriodo(); as erro) {
+    <div class="mt-4">
+      <app-status-banner tipo="error" [mensagem]="erro.mensagem" />
+    </div>
+  }
+
+  <form
+    (submit)="salvarPeriodo(); $event.preventDefault()"
+    novalidate
+    class="mt-5 grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 md:grid-cols-3"
+  >
+    <div>
+      <label for="info-periodo-inicio" class="block text-sm font-medium text-slate-800">
+        Início (no fuso selecionado) <span aria-hidden="true" class="text-red-600">*</span>
+      </label>
+      <input
+        id="info-periodo-inicio"
+        type="datetime-local"
+        [formField]="periodoForm.inicioLocal"
+        [attr.aria-invalid]="
+          periodoForm.inicioLocal().touched() && periodoForm.inicioLocal().invalid()
+            ? 'true'
+            : 'false'
+        "
+        [attr.aria-describedby]="
+          periodoForm.inicioLocal().touched() && periodoForm.inicioLocal().errors().length
+            ? 'info-periodo-inicio-erro'
+            : null
+        "
+        class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+      />
+      @if (periodoForm.inicioLocal().touched() && periodoForm.inicioLocal().errors().length) {
+        <p id="info-periodo-inicio-erro" class="mt-1 text-xs font-medium text-red-700">
+          {{ periodoForm.inicioLocal().errors()[0].message }}
+        </p>
+      }
+    </div>
+
+    <div>
+      <label for="info-periodo-termino" class="block text-sm font-medium text-slate-800">
+        Término (no fuso selecionado) <span aria-hidden="true" class="text-red-600">*</span>
+      </label>
+      <input
+        id="info-periodo-termino"
+        type="datetime-local"
+        [formField]="periodoForm.terminoLocal"
+        [attr.aria-invalid]="
+          periodoForm.terminoLocal().touched() && periodoForm.terminoLocal().invalid()
+            ? 'true'
+            : 'false'
+        "
+        [attr.aria-describedby]="
+          periodoForm.terminoLocal().touched() && periodoForm.terminoLocal().errors().length
+            ? 'info-periodo-termino-erro'
+            : null
+        "
+        class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+      />
+      @if (periodoForm.terminoLocal().touched() && periodoForm.terminoLocal().errors().length) {
+        <p id="info-periodo-termino-erro" class="mt-1 text-xs font-medium text-red-700">
+          {{ periodoForm.terminoLocal().errors()[0].message }}
+        </p>
+      }
+    </div>
+
+    <div>
+      <label for="info-periodo-fuso" class="block text-sm font-medium text-slate-800">
+        Fuso horário (IANA) <span aria-hidden="true" class="text-red-600">*</span>
+      </label>
+      <input
+        id="info-periodo-fuso"
+        type="text"
+        list="informativas-fusos-list"
+        [formField]="periodoForm.fuso"
+        autocorrect="off"
+        autocapitalize="none"
+        spellcheck="false"
+        [attr.aria-invalid]="
+          periodoForm.fuso().touched() && periodoForm.fuso().invalid() ? 'true' : 'false'
+        "
+        [attr.aria-describedby]="
+          periodoForm.fuso().touched() && periodoForm.fuso().errors().length
+            ? 'info-periodo-fuso-erro'
+            : null
+        "
+        class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+      />
+      <datalist id="informativas-fusos-list">
+        @for (zona of fusosComuns; track zona) {
+          <option [value]="zona"></option>
+        }
+      </datalist>
+      @if (periodoForm.fuso().touched() && periodoForm.fuso().errors().length) {
+        <p id="info-periodo-fuso-erro" class="mt-1 text-xs font-medium text-red-700">
+          {{ periodoForm.fuso().errors()[0].message }}
+        </p>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center justify-end gap-2 md:col-span-3">
+      @if (periodoEmEdicaoId()) {
+        <button
+          type="button"
+          (click)="cancelarEdicao()"
+          class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Cancelar edição
+        </button>
+      }
+      <button
+        type="submit"
+        [disabled]="facade.salvandoPeriodo()"
+        class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {{
+          facade.salvandoPeriodo()
+            ? 'Salvando período...'
+            : periodoEmEdicaoId()
+              ? 'Salvar alterações do período'
+              : 'Adicionar período'
+        }}
+      </button>
+    </div>
+  </form>
+
+  @if (periodosFormatados().length === 0) {
+    <p class="mt-4 rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-600">
+      Nenhum período cadastrado para esta atividade informativa.
+    </p>
+  } @else {
+    <ul class="mt-4 space-y-2.5">
+      @for (item of periodosFormatados(); track item.origem.id; let idx = $index) {
+        <li
+          class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-teal-700">
+              Período {{ idx + 1 }}
+            </p>
+            <p class="mt-0.5 text-sm font-semibold text-slate-900">
+              {{ item.data }} · {{ item.horario }}
+            </p>
+            <p class="text-xs text-slate-500">Fuso: {{ item.fuso }}</p>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              (click)="iniciarEdicao(item.origem)"
+              class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              data-action="remove-period"
+              (click)="solicitarRemocao(item.origem)"
+              class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+            >
+              Remover
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  <app-confirm-dialog
+    [aberto]="periodoParaRemover() !== null"
+    titulo="Remover período?"
+    mensagem="Este período será removido permanentemente da atividade informativa."
+    textoConfirmar="Remover período"
+    [processando]="facade.salvandoPeriodo()"
+    (confirmado)="confirmarRemocao()"
+    (cancelado)="cancelarRemocao()"
+  />
+</section>

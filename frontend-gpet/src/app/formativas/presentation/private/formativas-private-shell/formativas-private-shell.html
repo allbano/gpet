@@ -1,0 +1,58 @@
+<div class="space-y-6">
+  <header class="rounded-2xl border border-blue-200 bg-white p-6 shadow-xs">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-blue-700">
+          Área Privada · CRUD via API Gateway
+        </p>
+        <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+          Gestão de Atividades Formativas
+        </h1>
+      </div>
+
+      <div class="flex flex-wrap gap-2.5">
+        <a
+          routerLink="/public/formativas"
+          class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Ver catálogo público
+        </a>
+        <a
+          routerLink="/private/formativas/atividades/nova"
+          class="rounded-lg bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-blue-800"
+        >
+          Nova atividade
+        </a>
+      </div>
+    </div>
+
+    <nav aria-label="Seções de atividades formativas" class="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+      <a
+        routerLink="/private/formativas/atividades"
+        routerLinkActive="bg-blue-700 text-white border-blue-700"
+        ariaCurrentWhenActive="page"
+        class="rounded-lg border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Atividades
+      </a>
+      <a
+        routerLink="/private/formativas/tipos-atividade"
+        routerLinkActive="bg-blue-700 text-white border-blue-700"
+        ariaCurrentWhenActive="page"
+        class="rounded-lg border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Tipos de Atividade
+      </a>
+      <a
+        routerLink="/private/formativas/agenda"
+        routerLinkActive="bg-blue-700 text-white border-blue-700"
+        ariaCurrentWhenActive="page"
+        class="rounded-lg border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Agenda
+      </a>
+    </nav>
+  </header>
+
+  <router-outlet />
+</div>

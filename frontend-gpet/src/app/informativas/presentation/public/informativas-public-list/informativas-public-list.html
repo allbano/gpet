@@ -1,0 +1,123 @@
+<section class="space-y-6">
+  <header
+    class="flex flex-col gap-4 rounded-2xl border border-teal-200 bg-white p-6 shadow-xs lg:flex-row lg:items-center lg:justify-between"
+  >
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-teal-700">
+        Catálogo Público · GPET UFPR
+      </p>
+      <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        Atividades Informativas
+      </h1>
+      <p class="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">
+        Acesse cartilhas, boletins, materiais de divulgação científica e encontros informativos
+        publicados pelo grupo, mesmo antes da definição de datas de lançamento.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2.5">
+      <a
+        routerLink="/public/formativas"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Ir para Formativas
+      </a>
+      <a
+        routerLink="/private/informativas"
+        class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+      >
+        Área Privada (CRUD)
+      </a>
+    </div>
+  </header>
+
+  <search
+    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs"
+    aria-label="Consulta direta de atividade informativa por identificador"
+  >
+    <form
+      (submit)="abrirPorUuid(); $event.preventDefault()"
+      novalidate
+      class="flex flex-col gap-3 sm:flex-row sm:items-end"
+    >
+      <div class="flex-1">
+        <label for="busca-informativa-uuid" class="block text-sm font-medium text-slate-800">
+          Acessar atividade diretamente por UUID
+        </label>
+        <input
+          id="busca-informativa-uuid"
+          type="search"
+          [formField]="buscaForm.atividadeId"
+          placeholder="Ex.: 019aa000-0001-7000-8000-000000000001"
+          autocorrect="off"
+          autocapitalize="none"
+          spellcheck="false"
+          [attr.aria-invalid]="
+            buscaForm.atividadeId().touched() && buscaForm.atividadeId().invalid()
+              ? 'true'
+              : 'false'
+          "
+          [attr.aria-describedby]="
+            buscaForm.atividadeId().touched() && buscaForm.atividadeId().errors().length
+              ? 'busca-informativa-erro'
+              : null
+          "
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 placeholder:font-sans placeholder:text-slate-400"
+        />
+        @if (buscaForm.atividadeId().touched() && buscaForm.atividadeId().errors().length) {
+          <p id="busca-informativa-erro" class="mt-1 text-xs font-medium text-red-700">
+            {{ buscaForm.atividadeId().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+      >
+        Abrir atividade
+      </button>
+    </form>
+  </search>
+
+  @if (facade.erroLista(); as erro) {
+    <app-status-banner
+      tipo="error"
+      titulo="Não foi possível carregar as atividades informativas"
+      [mensagem]="erro.mensagem"
+      acaoTexto="Tentar novamente"
+      (acaoClicada)="facade.carregarPrimeiraPagina()"
+    />
+  }
+
+  @if (facade.carregandoLista() && facade.cartoes().length === 0) {
+    <app-loading-skeleton [linhas]="6" rotulo="Carregando atividades informativas publicadas..." />
+  } @else if (facade.cartoes().length === 0 && !facade.erroLista()) {
+    <app-empty-state
+      titulo="Nenhuma atividade informativa publicada"
+      descricao="Ainda não há materiais ou encontros informativos disponíveis no catálogo público."
+    >
+      <a
+        routerLink="/private/informativas/atividades/nova"
+        class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+      >
+        Cadastrar atividade informativa
+      </a>
+    </app-empty-state>
+  } @else {
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+      @for (cartao of facade.cartoes(); track cartao.id) {
+        <app-informativas-public-card [cartao]="cartao" />
+      }
+    </div>
+
+    <app-cursor-pagination
+      [totalCarregado]="facade.cartoes().length"
+      [possuiMais]="facade.proximoCursor() !== null"
+      [carregando]="facade.carregandoLista()"
+      [limiteAtual]="facade.limite()"
+      (carregarMais)="facade.carregarMais()"
+      (limiteAlterado)="facade.alterarLimite($event)"
+    />
+  }
+</section>

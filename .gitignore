@@ -1,5 +1,7 @@
 # PASTA DE AGENTES
 .codex/
+.agents
+skills-lock.json
 
 # Diretório de saída do Cargo (builds, binários e dependências compiladas)
 target/

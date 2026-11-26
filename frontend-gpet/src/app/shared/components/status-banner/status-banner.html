@@ -1,0 +1,29 @@
+<div
+  [attr.role]="roleAria()"
+  class="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+  [class]="containerClasses()"
+>
+  <div class="flex items-start gap-3">
+    <span
+      class="inline-flex shrink-0 items-center rounded-md border border-current/25 bg-white/70 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
+    >
+      {{ rotuloEstado() }}
+    </span>
+    <div>
+      @if (titulo()) {
+        <p class="text-sm font-semibold">{{ titulo() }}</p>
+      }
+      <p class="text-sm leading-relaxed">{{ mensagem() }}</p>
+    </div>
+  </div>
+
+  @if (acaoTexto()) {
+    <button
+      type="button"
+      (click)="acaoClicada.emit()"
+      class="shrink-0 self-start rounded-lg border border-current/30 bg-white px-3 py-1.5 text-xs font-semibold transition hover:bg-white/80 sm:self-center"
+    >
+      {{ acaoTexto() }}
+    </button>
+  }
+</div>

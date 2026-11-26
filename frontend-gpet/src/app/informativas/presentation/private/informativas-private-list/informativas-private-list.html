@@ -1,0 +1,106 @@
+<section class="space-y-4">
+  @if (facade.erroLista(); as erro) {
+    <app-status-banner
+      tipo="error"
+      titulo="Erro ao carregar cadastros"
+      [mensagem]="erro.mensagem"
+      acaoTexto="Tentar novamente"
+      (acaoClicada)="facade.carregarAtividades()"
+    />
+  }
+
+  @if (facade.carregandoLista() && facade.cartoes().length === 0) {
+    <app-loading-skeleton [linhas]="5" rotulo="Carregando atividades informativas cadastradas..." />
+  } @else if (facade.cartoes().length === 0 && !facade.erroLista()) {
+    <app-empty-state
+      titulo="Nenhuma atividade informativa cadastrada"
+      descricao="Crie a primeira cartilha, boletim ou encontro informativo."
+    >
+      <a
+        routerLink="/private/informativas/atividades/nova"
+        class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+      >
+        Criar atividade informativa
+      </a>
+    </app-empty-state>
+  } @else {
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+          <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <tr>
+              <th scope="col" class="px-4 py-3">Título e descrição</th>
+              <th scope="col" class="px-4 py-3">Modalidade</th>
+              <th scope="col" class="px-4 py-3">Meio</th>
+              <th scope="col" class="px-4 py-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (cartao of facade.cartoes(); track cartao.id) {
+              <tr class="hover:bg-slate-50/70">
+                <td class="px-4 py-3.5 align-top">
+                  <p class="font-semibold text-slate-900">{{ cartao.titulo }}</p>
+                  <p class="mt-0.5 line-clamp-2 max-w-xl text-xs text-slate-600">
+                    {{ cartao.descricao }}
+                  </p>
+                </td>
+                <td class="px-4 py-3.5 align-top">
+                  <span class="rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-900">
+                    {{ cartao.classificacao }}
+                  </span>
+                </td>
+                <td class="px-4 py-3.5 align-top">
+                  <app-meio-badge [meio]="cartao.meio" />
+                </td>
+                <td class="px-4 py-3.5 text-right align-top">
+                  <div class="flex flex-wrap justify-end gap-2">
+                    <a
+                      [routerLink]="['/private/informativas/atividades', cartao.id]"
+                      class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Editar e períodos
+                    </a>
+                    <a
+                      [routerLink]="['/public/informativas/atividades', cartao.id]"
+                      class="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 transition hover:bg-teal-100"
+                    >
+                      Público
+                    </a>
+                    <button
+                      type="button"
+                      data-action="request-delete"
+                      (click)="solicitarExclusao(cartao)"
+                      class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <app-cursor-pagination
+      [totalCarregado]="facade.cartoes().length"
+      [possuiMais]="facade.proximoCursor() !== null"
+      [carregando]="facade.carregandoLista()"
+      [limiteAtual]="facade.limite()"
+      [opcoesLimite]="[20, 50, 100]"
+      (carregarMais)="facade.carregarMaisAtividades()"
+      (limiteAlterado)="facade.alterarLimite($event)"
+    />
+  }
+
+  <app-confirm-dialog
+    [aberto]="atividadeParaExcluir() !== null"
+    titulo="Excluir atividade informativa?"
+    [mensagem]="mensagemConfirmacaoExclusao()"
+    textoConfirmar="Excluir atividade"
+    [processando]="facade.salvando()"
+    (confirmado)="confirmarExclusao()"
+    (cancelado)="cancelarExclusao()"
+  />
+</section>

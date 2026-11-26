@@ -1,0 +1,147 @@
+@startuml casos_de_uso_backend_gpet
+title Diagrama de Casos de Uso — Backend GPET (Rust: API Gateway + Serviços de Atividades)
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam defaultFontName SansSerif
+skinparam actorStyle awesome
+
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #455A64
+}
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #37474F
+  ArrowColor #455A64
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+
+' =========================
+' Atores
+' =========================
+actor "Visitante / Público" as Visitante
+actor "Gestor / Pesquisador\nGPET" as Gestor
+actor "Orquestrador /\nMonitoramento" as Monitor
+actor "Desenvolvedor /\nOperador CLI" as Dev
+
+' =========================
+' Fronteira do Sistema
+' =========================
+rectangle "Backend GPET (Arquitetura Rust: structs, enums, traits e módulos)" {
+
+  package "api_gateway\n<<crate: Pingora ProxyHttp>>" as GwPkg {
+    usecase "UC01 - Rotear e reescrever\nprefixos (/public e /private)" as UC_Rotear
+    usecase "UC02 - Reescrever cabeçalho\nLocation nas respostas" as UC_Location
+    usecase "UC03 - Verificar liveness (/health)\ne readiness agregada (/ready)" as UC_SondasGw
+    usecase "UC04 - Consultar Swagger UI\ne OpenAPI filtrada por visibilidade\n(feature: swagger)" as UC_Swagger
+  }
+
+  package "Serviços de Atividades\n(backend_atividades_formativas & backend_atividades_informativas)\n<<crates: Axum + SQLx + PostgreSQL 18>>" as BackPkg {
+
+    package "Consulta Pública\n(/public/{modulo}/...)" as PubPkg {
+      usecase "UC05 - Listar cartões de\natividades publicadas\n(paginação por cursor)" as UC_ListarPub
+      usecase "UC06 - Consultar detalhes e\nperíodos de atividade publicada" as UC_DetalhePub
+    }
+
+    package "Gestão de Atividades\n(/private/{modulo}/atividades)" as PrivAtivPkg {
+      usecase "UC07 - Listar cadastros\n(publicados e rascunhos)" as UC_ListarPriv
+      usecase "UC08 - Consultar detalhe\nde cadastro interno" as UC_DetalhePriv
+      usecase "UC09 - Criar atividade\n(rascunho ou publicada)" as UC_CriarAtiv
+      usecase "UC10 - Editar atividade\n(PATCH com bloqueio FOR UPDATE)" as UC_EditarAtiv
+      usecase "UC11 - Publicar atividade\n(exige conteúdo preenchido)" as UC_Publicar
+      usecase "UC12 - Excluir atividade\ne sessões vinculadas" as UC_ExcluirAtiv
+      usecase "UC13 - Validar invariantes de domínio\n(AtividadeFormativa / AtividadeInformativa)" as UC_ValidarAtiv
+    }
+
+    package "Programação e Agenda\n(/private/{modulo}/...)" as ProgPkg {
+      usecase "UC14 - Listar e consultar\nperíodos (sessões) da atividade" as UC_ListarPer
+      usecase "UC15 - Adicionar, editar ou\nremover sessão da programação\n(enum MudancaHorario)" as UC_AlterarProg
+      usecase "UC16 - Validar intervalo e fuso\n(Horario::validar / Periodo::editar)" as UC_ValidarHor
+      usecase "UC17 - Consultar agenda por\njanela temporal (gpet.vw_agenda)" as UC_Agenda
+    }
+
+    package "Classificações\n(/private/{modulo}/...)" as ClassPkg {
+      usecase "UC18 - Gerenciar Tipos de Atividade\n(formativas: /tipos-atividade)" as UC_Tipos
+      usecase "UC19 - Gerenciar Modalidades\n(informativas: /modalidades)" as UC_Modalidades
+    }
+
+    package "Sondas e Operação CLI\n(lib.rs / infraestrutura)" as OpsPkg {
+      usecase "UC20 - Verificar saúde (/health)\ne conexão PostgreSQL (/ready)" as UC_SondasMod
+      usecase "UC21 - Exportar OpenAPI,\naplicar migrações SQLx e\ncarregar dados mock (CLI)" as UC_Cli
+    }
+  }
+}
+
+' =========================
+' Associações dos Atores
+' =========================
+Visitante --> UC_ListarPub
+Visitante --> UC_DetalhePub
+
+Gestor --> UC_ListarPriv
+Gestor --> UC_DetalhePriv
+Gestor --> UC_CriarAtiv
+Gestor --> UC_EditarAtiv
+Gestor --> UC_ExcluirAtiv
+Gestor --> UC_ListarPer
+Gestor --> UC_AlterarProg
+Gestor --> UC_Agenda
+Gestor --> UC_Tipos
+Gestor --> UC_Modalidades
+
+Monitor --> UC_SondasGw
+Monitor --> UC_SondasMod
+
+Dev --> UC_Swagger
+Dev --> UC_Cli
+
+' =========================
+' Relacionamentos <<include>> e <<extend>>
+' =========================
+UC_ListarPub ..> UC_Rotear : <<include>>
+UC_DetalhePub ..> UC_Rotear : <<include>>
+UC_ListarPriv ..> UC_Rotear : <<include>>
+UC_CriarAtiv ..> UC_Rotear : <<include>>
+UC_EditarAtiv ..> UC_Rotear : <<include>>
+UC_AlterarProg ..> UC_Rotear : <<include>>
+UC_Agenda ..> UC_Rotear : <<include>>
+
+UC_CriarAtiv ..> UC_ValidarAtiv : <<include>>
+UC_EditarAtiv ..> UC_ValidarAtiv : <<include>>
+UC_Publicar ..> UC_CriarAtiv : <<extend>>\n[publicacao_publica = true]
+UC_Publicar ..> UC_EditarAtiv : <<extend>>\n[publicacao_publica = true]
+
+UC_CriarAtiv ..> UC_Location : <<include>>\n[HTTP 201]
+UC_AlterarProg ..> UC_Location : <<include>>\n[HTTP 201 ao adicionar]
+UC_Tipos ..> UC_Location : <<include>>\n[HTTP 201 ao criar]
+UC_Modalidades ..> UC_Location : <<include>>\n[HTTP 201 ao criar]
+
+UC_AlterarProg ..> UC_ValidarHor : <<include>>\n[Adicionar / Editar]
+UC_SondasGw ..> UC_SondasMod : <<include>>\n[tokio::join! em /ready]
+
+' =========================
+' Nota de Modelagem Rust
+' =========================
+note bottom of BackPkg
+  **Adaptação para Rust (sem classes OOP):**
+  • Domínio modelado por **structs** com blocos **impl**
+    (`AtividadeFormativa`, `AtividadeInformativa`, `Periodo`, `Horario`)
+    e **enums** (`Meio`, `MudancaHorario`, `Erro`).
+  • Camadas `http`, `aplicacao`, `consultas` e `repositorio`
+    são **módulos com funções livres `async fn`**, recebendo
+    estado explícito (`&PgPool`, `&mut PgConnection`, `impl Executor`).
+  • Polimorfismo via **traits** (`ProxyHttp`, `IntoResponse`, `From`, `Executor`).
+end note
+
+legend right
+  |= Módulo / Crate |= Rota Externa no Gateway |= Prefixo Interno |
+  | backend_atividades_formativas | /public/formativas & /private/formativas | /api/v1/formativas |
+  | backend_atividades_informativas | /public/informativas & /private/informativas | /api/v1/informativas |
+endlegend
+@enduml
