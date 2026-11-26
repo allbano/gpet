@@ -1,3 +1,14 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --color-gpet-navy: #0f2942;
+  --color-gpet-blue: #1d4ed8;
+  --color-gpet-teal: #0f766e;
+  --color-gpet-slate: #334155;
+}
+
+:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
