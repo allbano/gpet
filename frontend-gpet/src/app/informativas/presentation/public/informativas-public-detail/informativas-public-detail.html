@@ -1,0 +1,123 @@
+<article class="space-y-6">
+  <nav aria-label="Navegação estrutural" class="flex flex-wrap items-center justify-between gap-3">
+    <a
+      routerLink="/public/informativas"
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 hover:underline"
+    >
+      <span aria-hidden="true">←</span>
+      Voltar às atividades informativas
+    </a>
+
+    @if (facade.detalhe(); as item) {
+      <a
+        [routerLink]="['/private/informativas/atividades', item.id]"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+      >
+        Editar na área privada
+      </a>
+    }
+  </nav>
+
+  @if (facade.carregandoDetalhe()) {
+    <app-loading-skeleton [linhas]="4" rotulo="Carregando detalhes da atividade informativa..." />
+  } @else if (facade.erroDetalhe(); as erro) {
+    <app-status-banner
+      tipo="error"
+      [titulo]="
+        erro.kind === 'not_found'
+          ? 'Atividade informativa não encontrada ou não publicada'
+          : 'Erro ao carregar atividade'
+      "
+      [mensagem]="erro.mensagem"
+      acaoTexto="Tentar novamente"
+      (acaoClicada)="facade.carregarDetalhe(id())"
+    />
+  } @else if (facade.detalhe(); as atividade) {
+    <header class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span
+          class="inline-flex items-center rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-900"
+        >
+          {{ atividade.classificacao }}
+        </span>
+        <app-meio-badge [meio]="atividade.meio" />
+        @if (atividade.agenda_pesquisa) {
+          <span
+            class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-900"
+          >
+            Na agenda de pesquisa
+          </span>
+        }
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        {{ atividade.titulo }}
+      </h1>
+      <p class="mt-2 text-base leading-relaxed text-slate-600">
+        {{ atividade.descricao }}
+      </p>
+
+      <dl class="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-5 sm:grid-cols-3">
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Público-alvo</dt>
+          <dd class="mt-1 text-sm font-medium text-slate-900">{{ atividade.publico_alvo }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Carga horária</dt>
+          <dd class="mt-1 text-sm font-medium text-slate-900">
+            {{ atividade.carga_horaria_minutos | cargaHoraria }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Períodos de lançamento / exibição
+          </dt>
+          <dd class="mt-1 text-sm font-medium text-slate-900">
+            {{ atividade.periodos.length }}
+          </dd>
+        </div>
+      </dl>
+    </header>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+      <h2 class="text-lg font-semibold text-slate-900">Conteúdo</h2>
+      <div class="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+        {{ atividade.conteudo }}
+      </div>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-slate-900">Períodos de Lançamento e Divulgação</h2>
+        <span class="text-xs font-medium text-slate-500">
+          Horários exibidos no fuso cadastrado
+        </span>
+      </div>
+
+      @if (periodosFormatados().length === 0) {
+        <p class="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+          Esta atividade informativa está disponível sem datas de lançamento definidas.
+        </p>
+      } @else {
+        <ol class="mt-4 space-y-3">
+          @for (periodo of periodosFormatados(); track periodo.id; let idx = $index) {
+            <li
+              class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-teal-700">
+                  Período {{ idx + 1 }}
+                </p>
+                <p class="mt-0.5 text-sm font-semibold text-slate-900">{{ periodo.data }}</p>
+              </div>
+              <div class="text-sm text-slate-700 sm:text-right">
+                <p class="font-medium text-slate-900">{{ periodo.horario }}</p>
+                <p class="text-xs text-slate-500">Fuso: {{ periodo.fuso }}</p>
+              </div>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+  }
+</article>

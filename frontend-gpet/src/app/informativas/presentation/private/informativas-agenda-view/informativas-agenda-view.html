@@ -1,0 +1,134 @@
+<section class="space-y-6">
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Agenda Interna de Atividades Informativas</h2>
+      <p class="mt-0.5 text-sm text-slate-600">
+        Lançamentos e ações informativas com <code>agenda_pesquisa = true</code> na janela
+        selecionada.
+      </p>
+    </div>
+
+    <form
+      (submit)="aplicarConsulta(); $event.preventDefault()"
+      novalidate
+      class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-4"
+    >
+      <div>
+        <label for="agenda-info-inicio" class="block text-sm font-medium text-slate-800">
+          Início da janela
+        </label>
+        <input
+          id="agenda-info-inicio"
+          type="datetime-local"
+          [formField]="filtroForm.inicioLocal"
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+      </div>
+
+      <div>
+        <label for="agenda-info-termino" class="block text-sm font-medium text-slate-800">
+          Término exclusivo
+        </label>
+        <input
+          id="agenda-info-termino"
+          type="datetime-local"
+          [formField]="filtroForm.terminoLocal"
+          [attr.aria-invalid]="
+            filtroForm.terminoLocal().touched() && filtroForm.terminoLocal().invalid()
+              ? 'true'
+              : 'false'
+          "
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+        @if (filtroForm.terminoLocal().touched() && filtroForm.terminoLocal().errors().length) {
+          <p class="mt-1 text-xs font-medium text-red-700">
+            {{ filtroForm.terminoLocal().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="agenda-info-fuso" class="block text-sm font-medium text-slate-800">Fuso</label>
+        <input
+          id="agenda-info-fuso"
+          type="text"
+          list="agenda-info-fusos"
+          [formField]="filtroForm.fuso"
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+        <datalist id="agenda-info-fusos">
+          @for (zona of fusosComuns; track zona) {
+            <option [value]="zona"></option>
+          }
+        </datalist>
+      </div>
+
+      <div class="flex items-end">
+        <button
+          type="submit"
+          [disabled]="facade.carregandoAgenda()"
+          class="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:opacity-60"
+        >
+          {{ facade.carregandoAgenda() ? 'Consultando...' : 'Consultar janela' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  @if (facade.erroAgenda(); as erro) {
+    <app-status-banner tipo="error" [mensagem]="erro.mensagem" />
+  }
+
+  @if (facade.carregandoAgenda() && ocorrenciasFormatadas().length === 0) {
+    <app-loading-skeleton [linhas]="4" rotulo="Consultando ocorrências informativas..." />
+  } @else if (ocorrenciasFormatadas().length === 0) {
+    <app-empty-state
+      titulo="Nenhuma ocorrência no intervalo"
+      descricao="Ajuste a janela temporal ou marque 'Incluir períodos de lançamento na agenda' nas atividades."
+    />
+  } @else {
+    <div class="space-y-3">
+      @for (item of ocorrenciasFormatadas(); track item.origem.periodo_id) {
+        <article
+          class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-900">
+                {{ item.origem.natureza }}
+              </span>
+              <app-meio-badge [meio]="item.origem.meio" />
+              <span class="text-xs text-slate-500">Público: {{ item.origem.publico_alvo }}</span>
+            </div>
+            <h3 class="text-base font-semibold text-slate-900">{{ item.origem.titulo }}</h3>
+            <p class="text-sm text-slate-600">{{ item.origem.descricao }}</p>
+          </div>
+
+          <div class="flex flex-col items-start gap-2 sm:items-end">
+            <div class="text-sm font-semibold text-slate-900">{{ item.data }}</div>
+            <div class="text-sm text-slate-700">{{ item.horario }} ({{ item.fuso }})</div>
+            <a
+              [routerLink]="['/private/informativas/atividades', item.origem.atividade_id]"
+              class="text-xs font-semibold text-teal-700 hover:underline"
+            >
+              Gerenciar atividade →
+            </a>
+          </div>
+        </article>
+      }
+    </div>
+
+    @if (facade.proximoCursorAgenda() !== null) {
+      <div class="flex justify-center">
+        <button
+          type="button"
+          [disabled]="facade.carregandoAgenda()"
+          (click)="facade.carregarMaisAgenda()"
+          class="rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          {{ facade.carregandoAgenda() ? 'Carregando...' : 'Carregar mais ocorrências' }}
+        </button>
+      </div>
+    }
+  }
+</section>
