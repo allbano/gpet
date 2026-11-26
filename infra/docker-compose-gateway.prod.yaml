@@ -1,0 +1,98 @@
+name: gpet-gateway-prod
+services:
+  pg18_atividades_formativas:
+    image: postgres:18-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: formativas
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_formativas_password
+    volumes:
+      - pgdata_formativas:/var/lib/postgresql
+    networks: [banco_formativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    secrets: [pg_formativas_password]
+
+  backend_atividades_formativas:
+    build:
+      context: ../backend_atividades_formativas
+      target: producao
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_formativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet@pg18_atividades_formativas/formativas
+      DATABASE_PASSWORD_FILE: /run/secrets/pg_formativas_password
+    secrets: [pg_formativas_password]
+    networks: [banco_formativas, gateway]
+
+  pg18_atividades_informativas:
+    image: postgres:18-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: informativas
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_informativas_password
+    volumes:
+      - pgdata_informativas:/var/lib/postgresql
+    networks: [banco_informativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    secrets: [pg_informativas_password]
+
+  backend_atividades_informativas:
+    build:
+      context: ../backend_atividades_informativas
+      target: producao
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_informativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet@pg18_atividades_informativas/informativas
+      DATABASE_PASSWORD_FILE: /run/secrets/pg_informativas_password
+    secrets: [pg_informativas_password]
+    networks: [banco_informativas, gateway]
+
+  api_gateway:
+    build:
+      context: ../api_gateway
+      target: producao
+    restart: unless-stopped
+    depends_on:
+      - backend_atividades_formativas
+      - backend_atividades_informativas
+    environment:
+      BIND_ADDR: 0.0.0.0:55569
+      FORMATIVAS_UPSTREAM: backend_atividades_formativas:8080
+      INFORMATIVAS_UPSTREAM: backend_atividades_informativas:8080
+    ports: ["${HTTP_GATEWAY_PORT:-55569}:55569"]
+    networks: [gateway, externa]
+
+volumes:
+  pgdata_formativas:
+  pgdata_informativas:
+
+networks:
+  banco_formativas:
+    internal: true
+  banco_informativas:
+    internal: true
+  gateway:
+    internal: true
+  externa:
+    internal: false
+
+secrets:
+  pg_formativas_password:
+    file: ${PG_FORMATIVAS_PASSWORD_FILE:?Informe o caminho do secret}
+  pg_informativas_password:
+    file: ${PG_INFORMATIVAS_PASSWORD_FILE:?Informe o caminho do secret}

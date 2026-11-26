@@ -1,0 +1,86 @@
+name: gpet-gateway-dev
+services:
+  pg18_atividades_formativas:
+    image: postgres:18-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: formativas
+      POSTGRES_PASSWORD: gpet_local
+    volumes:
+      - pgdata_formativas:/var/lib/postgresql
+    networks: [banco_formativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:${PG_FORMATIVAS_PORT:-5432}:5432"]
+
+  backend_atividades_formativas:
+    build:
+      context: ../backend_atividades_formativas
+      target: desenvolvimento
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_formativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet:gpet_local@pg18_atividades_formativas/formativas
+    networks: [banco_formativas, gateway]
+
+  pg18_atividades_informativas:
+    image: postgres:18-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: informativas
+      POSTGRES_PASSWORD: gpet_local
+    volumes:
+      - pgdata_informativas:/var/lib/postgresql
+    networks: [banco_informativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:${PG_INFORMATIVAS_PORT:-5433}:5432"]
+
+  backend_atividades_informativas:
+    build:
+      context: ../backend_atividades_informativas
+      target: desenvolvimento
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_informativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet:gpet_local@pg18_atividades_informativas/informativas
+    networks: [banco_informativas, gateway]
+
+  api_gateway:
+    build:
+      context: ../api_gateway
+      target: desenvolvimento
+    restart: unless-stopped
+    depends_on:
+      - backend_atividades_formativas
+      - backend_atividades_informativas
+    environment:
+      BIND_ADDR: 0.0.0.0:55569
+      FORMATIVAS_UPSTREAM: backend_atividades_formativas:8080
+      INFORMATIVAS_UPSTREAM: backend_atividades_informativas:8080
+    ports: ["127.0.0.1:${HTTP_GATEWAY_PORT:-55569}:55569"]
+    networks: [gateway]
+
+volumes:
+  pgdata_formativas:
+  pgdata_informativas:
+
+networks:
+  banco_formativas:
+    internal: false
+  banco_informativas:
+    internal: false
+  gateway:
+    internal: false
