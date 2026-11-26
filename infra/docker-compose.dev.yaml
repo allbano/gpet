@@ -1,0 +1,71 @@
+name: gpet-dev
+services:
+  pg18_atividades_formativas:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: formativas
+      POSTGRES_PASSWORD: gpet_local
+    volumes:
+      - pgdata_formativas:/var/lib/postgresql
+    networks: [banco_formativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:${PG_FORMATIVAS_PORT:-5432}:5432"]
+
+  backend_atividades_formativas:
+    build:
+      context: ../backend_atividades_formativas
+      target: desenvolvimento
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_formativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet:gpet_local@pg18_atividades_formativas/formativas
+    ports: ["127.0.0.1:${HTTP_FORMATIVAS_PORT:-8081}:8080"]
+    networks: [banco_formativas]
+
+  pg18_atividades_informativas:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gpet
+      POSTGRES_DB: informativas
+      POSTGRES_PASSWORD: gpet_local
+    volumes:
+      - pgdata_informativas:/var/lib/postgresql
+    networks: [banco_informativas]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:${PG_INFORMATIVAS_PORT:-5433}:5432"]
+
+  backend_atividades_informativas:
+    build:
+      context: ../backend_atividades_informativas
+      target: desenvolvimento
+    restart: unless-stopped
+    depends_on:
+      pg18_atividades_informativas:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gpet:gpet_local@pg18_atividades_informativas/informativas
+    ports: ["127.0.0.1:${HTTP_INFORMATIVAS_PORT:-8082}:8080"]
+    networks: [banco_informativas]
+
+volumes:
+  pgdata_formativas:
+  pgdata_informativas:
+
+networks:
+  banco_formativas:
+    internal: false
+  banco_informativas:
+    internal: false
