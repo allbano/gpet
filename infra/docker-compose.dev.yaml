@@ -1,7 +1,7 @@
 name: gpet-dev
 services:
   pg18_atividades_formativas:
-    image: postgres:18-alpine
+    image: postgres:18-alpine3.23
     restart: unless-stopped
     environment:
       POSTGRES_USER: gpet
@@ -31,7 +31,7 @@ services:
     networks: [banco_formativas]
 
   pg18_atividades_informativas:
-    image: postgres:18-alpine
+    image: postgres:18-alpine3.23
     restart: unless-stopped
     environment:
       POSTGRES_USER: gpet
