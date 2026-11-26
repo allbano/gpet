@@ -1,0 +1,37 @@
+<div
+  class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+>
+  <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+    <span>
+      Exibindo <strong class="font-semibold text-slate-900">{{ totalCarregado() }}</strong>
+      {{ totalCarregado() === 1 ? 'registro' : 'registros' }}
+    </span>
+
+    <label [for]="selectId" class="flex items-center gap-2">
+      <span>Itens por página</span>
+      <select
+        [id]="selectId"
+        [value]="limiteAtual()"
+        [disabled]="carregando()"
+        (change)="aoAlterarLimite($event)"
+        class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-900"
+      >
+        @for (opcao of opcoesLimite(); track opcao) {
+          <option [value]="opcao" [selected]="opcao === limiteAtual()">{{ opcao }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  @if (possuiMais()) {
+    <button
+      type="button"
+      data-action="load-more"
+      [disabled]="carregando()"
+      (click)="carregarMais.emit()"
+      class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {{ carregando() ? 'Carregando...' : 'Carregar mais' }}
+    </button>
+  }
+</div>
