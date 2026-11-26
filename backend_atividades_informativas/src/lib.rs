@@ -6,7 +6,11 @@ mod http;
 mod infraestrutura;
 mod repositorio;
 
+use mimalloc::MiMalloc;
 use std::env;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 pub async fn executar() -> Result<(), Box<dyn std::error::Error>> {
     let (app, mut spec) = http::rotas().split_for_parts();

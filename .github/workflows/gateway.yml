@@ -1,0 +1,76 @@
+name: Contrato do API Gateway
+on: [push, pull_request]
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    services:
+      postgres_formativas:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: gpet
+          POSTGRES_DB: formativas
+          POSTGRES_PASSWORD: local
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U gpet -d formativas" --health-interval 3s --health-retries 20
+      postgres_informativas:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: gpet
+          POSTGRES_DB: informativas
+          POSTGRES_PASSWORD: local
+        ports: ["5433:5432"]
+        options: --health-cmd "pg_isready -U gpet -d informativas" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verificar gateway (com e sem Swagger)
+        working-directory: api_gateway
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo clippy --all-targets --features swagger --locked -- -D warnings
+          cargo test --locked
+          cargo test --features swagger --locked
+      - name: Validar contratos pelos dois módulos via gateway
+        shell: bash
+        run: |
+          cargo build --locked -p backend_atividades_formativas --manifest-path backend_atividades_formativas/Cargo.toml
+          cargo build --locked -p backend_atividades_informativas --manifest-path backend_atividades_informativas/Cargo.toml
+          cargo build --locked -p api_gateway --manifest-path api_gateway/Cargo.toml
+
+          bin_fmt="backend_atividades_formativas/target/debug/backend_atividades_formativas"
+          bin_inf="backend_atividades_informativas/target/debug/backend_atividades_informativas"
+          bin_gw="api_gateway/target/debug/api_gateway"
+
+          DATABASE_URL=postgres://gpet:local@127.0.0.1:5432/formativas "$bin_fmt" mock
+          DATABASE_URL=postgres://gpet:local@127.0.0.1:5433/informativas "$bin_inf" mock
+
+          DATABASE_URL=postgres://gpet:local@127.0.0.1:5432/formativas BIND_ADDR=127.0.0.1:8081 "$bin_fmt" &
+          pid_fmt=$!
+          DATABASE_URL=postgres://gpet:local@127.0.0.1:5433/informativas BIND_ADDR=127.0.0.1:8082 "$bin_inf" &
+          pid_inf=$!
+          trap 'kill "$pid_fmt" "$pid_inf" 2>/dev/null || true' EXIT
+
+          curl -fsS --retry 20 --retry-connrefused http://127.0.0.1:8081/ready
+          curl -fsS --retry 20 --retry-connrefused http://127.0.0.1:8082/ready
+
+          for modo in padrao swagger; do
+            opcoes=()
+            if [[ "$modo" == swagger ]]; then
+              cargo build --locked -p api_gateway --manifest-path api_gateway/Cargo.toml --features swagger
+              opcoes+=(--swagger)
+            fi
+            BIND_ADDR=127.0.0.1:55569 FORMATIVAS_UPSTREAM=127.0.0.1:8081 INFORMATIVAS_UPSTREAM=127.0.0.1:8082 "$bin_gw" &
+            pid_gw=$!
+            curl -fsS --retry 20 --retry-connrefused http://127.0.0.1:55569/ready
+            if [[ "$modo" == swagger ]]; then
+              for rota in /public/formativas/openapi.json /private/formativas/openapi.json /public/informativas/openapi.json /private/informativas/openapi.json; do
+                arquivo="spec-${modo}-$(echo "$rota" | tr '/' '_').json"
+                curl -fsS "http://127.0.0.1:55569${rota}" > "$arquivo"
+                pipx run --spec openapi-spec-validator==0.7.2 openapi-spec-validator "$arquivo"
+              done
+            fi
+            python3 api_gateway/tests/contrato_gateway.py http://127.0.0.1:55569 "${opcoes[@]}"
+            kill "$pid_gw"
+            wait "$pid_gw" || true
+          done
