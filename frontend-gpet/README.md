@@ -1,59 +1,48 @@
-# FrontendGpet
+# Frontend GPET (Angular 22)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.3.0.
+Aplicação web em **Angular 22**, **Tailwind CSS v4** e **Signal Forms** para os serviços independentes de **Atividades Formativas** e **Atividades Informativas** do GPET - UFPR, integrada exclusivamente ao **`api_gateway`**.
 
-## Development server
+## Arquitetura (Domain-Driven Design)
 
-To start a local development server, run:
+Os módulos de negócio são completamente isolados em dois *Bounded Contexts* sem importações cruzadas:
 
-```bash
-ng serve
+- `src/app/formativas/`:
+  - `domain/`: entidades, regras de validação (`AtividadeFormativa`, `PeriodoFormativo`, `TipoAtividade`) e portas (`ATIVIDADE_FORMATIVA_REPOSITORY`, `TIPO_ATIVIDADE_REPOSITORY`).
+  - `application/`: facades baseadas em Angular Signals (`FormativasPublicCatalogFacade`, `FormativasPrivateManagerFacade`).
+  - `infrastructure/`: adaptadores HTTP exclusivos para `/public/formativas/*` e `/private/formativas/*`.
+  - `presentation/`: telas separadas para `public/` (READ por listagem paginada por cursor e detalhe por UUID) e `private/` (CRUD completo de atividades, períodos, tipos de atividade e agenda).
+- `src/app/informativas/`:
+  - `domain/`: entidades, regras de validação (`AtividadeInformativa`, `PeriodoInformativo`, `Modalidade`) e portas (`ATIVIDADE_INFORMATIVA_REPOSITORY`, `MODALIDADE_REPOSITORY`).
+  - `application/`: facades baseadas em Angular Signals (`InformativasPublicCatalogFacade`, `InformativasPrivateManagerFacade`).
+  - `infrastructure/`: adaptadores HTTP exclusivos para `/public/informativas/*` e `/private/informativas/*`.
+  - `presentation/`: telas separadas para `public/` (READ) e `private/` (CRUD completo de atividades, períodos, modalidades e agenda).
+- `src/app/core/`: configuração do `api_gateway` (`API_GATEWAY_BASE_URL`), mapeamento de erros HTTP, checagem de prontidão (`/ready`, `/public/*/ready`), notificações e conversão de fuso horário IANA (`America/Sao_Paulo`, `UTC`, etc.).
+- `src/app/shared/`: componentes e pipes reutilizáveis (`ConfirmDialog` com `<dialog>` nativo, `CursorPagination`, `MeioBadge`, `StatusBanner`, `EmptyState`, `LoadingSkeleton`, `NotificationToast`, `CargaHorariaPipe`, `PeriodoFusoPipe`), todos com `.ts`, `.html`, `.css` e `.spec.ts` separados.
+
+## Execução com o API Gateway
+
+1. Suba os bancos, os backends e o `api_gateway` na raiz do repositório:
+
+```sh
+docker compose -f infra/docker-compose-gateway.dev.yaml up --build -d
+docker compose -f infra/docker-compose-gateway.dev.yaml exec backend_atividades_formativas /usr/local/bin/atividades mock
+docker compose -f infra/docker-compose-gateway.dev.yaml exec backend_atividades_informativas /usr/local/bin/atividades mock
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+2. Inicie o servidor Angular (o arquivo `proxy.conf.json` encaminha `/public`, `/private`, `/health` e `/ready` para `http://127.0.0.1:55569`):
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```sh
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Acesse `http://localhost:4200/`.
 
-```bash
-ng generate --help
+## Testes (TDD) e Build
+
+```sh
+# Executar toda a suíte de testes unitários e de rotas (Vitest)
+npm test -- --watch=false
+
+# Gerar build de produção
+npm run build
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
