@@ -1,0 +1,131 @@
+<a
+  href="#conteudo-principal"
+  class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+>
+  Pular para o conteúdo principal
+</a>
+
+<div class="flex min-h-screen flex-col">
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+      <a
+        routerLink="/"
+        (click)="fecharMenuMobile()"
+        class="flex items-center gap-2.5 text-slate-900"
+      >
+        <span
+          class="inline-flex size-9 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold tracking-wider text-white"
+        >
+          GPET
+        </span>
+        <span>
+          <span class="block text-sm font-bold leading-none">GPET · UFPR</span>
+          <span class="block text-[11px] text-slate-500">Atividades Formativas & Informativas</span>
+        </span>
+      </a>
+
+      <button
+        type="button"
+        class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 lg:hidden"
+        [attr.aria-expanded]="menuMobileAberto()"
+        aria-controls="navegacao-principal"
+        (click)="alternarMenuMobile()"
+      >
+        {{ menuMobileAberto() ? 'Fechar menu' : 'Menu' }}
+      </button>
+
+      <nav
+        aria-label="Navegação principal"
+        class="hidden items-center gap-1.5 lg:flex"
+      >
+        <a
+          routerLink="/public/formativas"
+          routerLinkActive="bg-blue-50 text-blue-900 border-blue-200"
+          ariaCurrentWhenActive="page"
+          class="rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Formativas (Público)
+        </a>
+        <a
+          routerLink="/private/formativas"
+          routerLinkActive="bg-blue-700 text-white border-blue-700"
+          ariaCurrentWhenActive="page"
+          class="rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Formativas (Privado)
+        </a>
+        <span aria-hidden="true" class="mx-1 h-5 w-px bg-slate-200"></span>
+        <a
+          routerLink="/public/informativas"
+          routerLinkActive="bg-teal-50 text-teal-900 border-teal-200"
+          ariaCurrentWhenActive="page"
+          class="rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Informativas (Público)
+        </a>
+        <a
+          routerLink="/private/informativas"
+          routerLinkActive="bg-teal-700 text-white border-teal-700"
+          ariaCurrentWhenActive="page"
+          class="rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Informativas (Privado)
+        </a>
+      </nav>
+    </div>
+
+    @if (menuMobileAberto()) {
+      <nav
+        id="navegacao-principal"
+        aria-label="Navegação principal móvel"
+        class="border-t border-slate-200 bg-slate-50 px-4 py-3 lg:hidden"
+      >
+        <div class="flex flex-col gap-1.5">
+          <a
+            routerLink="/public/formativas"
+            (click)="fecharMenuMobile()"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-800 hover:bg-white"
+          >
+            Formativas (Público)
+          </a>
+          <a
+            routerLink="/private/formativas"
+            (click)="fecharMenuMobile()"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-800 hover:bg-white"
+          >
+            Formativas (Privado)
+          </a>
+          <a
+            routerLink="/public/informativas"
+            (click)="fecharMenuMobile()"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-800 hover:bg-white"
+          >
+            Informativas (Público)
+          </a>
+          <a
+            routerLink="/private/informativas"
+            (click)="fecharMenuMobile()"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-800 hover:bg-white"
+          >
+            Informativas (Privado)
+          </a>
+        </div>
+      </nav>
+    }
+  </header>
+
+  <main id="conteudo-principal" class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <router-outlet />
+  </main>
+
+  <footer class="border-t border-slate-200 bg-white">
+    <div
+      class="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"
+    >
+      <span>Grupo de Pesquisa GPET · UFPR</span>
+      <span>Integração unificada via API Gateway (<code>/public/*</code> e <code>/private/*</code>)</span>
+    </div>
+  </footer>
+</div>
+
+<app-notification-toast />

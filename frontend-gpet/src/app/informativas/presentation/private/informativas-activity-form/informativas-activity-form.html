@@ -1,0 +1,332 @@
+<section class="space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <a
+      routerLink="/private/informativas/atividades"
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 hover:underline"
+    >
+      <span aria-hidden="true">←</span>
+      Voltar para a listagem privada
+    </a>
+
+    @if (facade.atividadeAtual(); as atual) {
+      <div class="flex flex-wrap gap-2">
+        @if (atual.publicacao_publica) {
+          <a
+            [routerLink]="['/public/informativas/atividades', atual.id]"
+            class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 transition hover:bg-teal-100"
+          >
+            Abrir página pública
+          </a>
+        }
+        <button
+          type="button"
+          (click)="confirmarExclusaoAberto.set(true)"
+          class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+        >
+          Excluir atividade
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (facade.carregandoDetalhe()) {
+    <app-loading-skeleton [linhas]="4" rotulo="Carregando dados da atividade informativa..." />
+  } @else {
+    @if (facade.erroOperacao(); as erro) {
+      <app-status-banner tipo="error" titulo="Erro ao salvar" [mensagem]="erro.mensagem" />
+    }
+
+    <form
+      (submit)="salvar(); $event.preventDefault()"
+      novalidate
+      class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8"
+    >
+      <div class="border-b border-slate-100 pb-4">
+        <h2 class="text-xl font-bold text-slate-900">
+          {{ emEdicao() ? 'Editar Atividade Informativa' : 'Nova Atividade Informativa' }}
+        </h2>
+        <p class="mt-1 text-sm text-slate-600">
+          Materiais de divulgação podem ser publicados sem carga horária nem períodos definidos.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label for="informativa-classificacao" class="block text-sm font-medium text-slate-800">
+            Modalidade <span aria-hidden="true" class="text-red-600">*</span>
+          </label>
+          <select
+            id="informativa-classificacao"
+            [formField]="atividadeForm.classificacaoId"
+            [attr.aria-invalid]="
+              atividadeForm.classificacaoId().touched() && atividadeForm.classificacaoId().invalid()
+                ? 'true'
+                : 'false'
+            "
+            [attr.aria-describedby]="
+              atividadeForm.classificacaoId().touched() &&
+              atividadeForm.classificacaoId().errors().length
+                ? 'informativa-classificacao-erro'
+                : null
+            "
+            class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+          >
+            <option value="">Selecione uma modalidade...</option>
+            @for (mod of facade.modalidades(); track mod.id) {
+              <option [value]="mod.id">{{ mod.nome }}</option>
+            }
+          </select>
+          @if (
+            atividadeForm.classificacaoId().touched() &&
+            atividadeForm.classificacaoId().errors().length
+          ) {
+            <p id="informativa-classificacao-erro" class="mt-1 text-xs font-medium text-red-700">
+              {{ atividadeForm.classificacaoId().errors()[0].message }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="informativa-carga" class="block text-sm font-medium text-slate-800">
+            Carga horária (minutos, opcional)
+          </label>
+          <input
+            id="informativa-carga"
+            type="text"
+            inputmode="numeric"
+            [formField]="atividadeForm.cargaHorariaTexto"
+            placeholder="Deixe vazio para materiais de divulgação"
+            [attr.aria-invalid]="
+              atividadeForm.cargaHorariaTexto().touched() &&
+              atividadeForm.cargaHorariaTexto().invalid()
+                ? 'true'
+                : 'false'
+            "
+            [attr.aria-describedby]="
+              atividadeForm.cargaHorariaTexto().touched() &&
+              atividadeForm.cargaHorariaTexto().errors().length
+                ? 'informativa-carga-erro'
+                : 'informativa-carga-ajuda'
+            "
+            class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          <p id="informativa-carga-ajuda" class="mt-1 text-xs text-slate-500">
+            Opcional para cartilhas, boletins e ações de divulgação.
+          </p>
+          @if (
+            atividadeForm.cargaHorariaTexto().touched() &&
+            atividadeForm.cargaHorariaTexto().errors().length
+          ) {
+            <p id="informativa-carga-erro" class="mt-1 text-xs font-medium text-red-700">
+              {{ atividadeForm.cargaHorariaTexto().errors()[0].message }}
+            </p>
+          }
+        </div>
+      </div>
+
+      <fieldset class="rounded-xl border border-slate-200 p-4">
+        <legend class="px-1 text-sm font-medium text-slate-800">
+          Meio de realização <span aria-hidden="true" class="text-red-600">*</span>
+        </legend>
+        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          @for (opcao of meios; track opcao.valor) {
+            <label
+              class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-3 hover:bg-slate-50"
+            >
+              <input
+                type="radio"
+                [value]="opcao.valor"
+                [formField]="atividadeForm.meio"
+                class="mt-0.5 size-4 accent-teal-700"
+              />
+              <span>
+                <span class="block text-sm font-semibold text-slate-900">{{ opcao.rotulo }}</span>
+                <span class="block text-xs text-slate-600">{{ opcao.descricao }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label for="informativa-titulo" class="block text-sm font-medium text-slate-800">
+            Título da ação <span aria-hidden="true" class="text-red-600">*</span>
+          </label>
+          <input
+            id="informativa-titulo"
+            type="text"
+            [formField]="atividadeForm.titulo"
+            [attr.aria-invalid]="
+              atividadeForm.titulo().touched() && atividadeForm.titulo().invalid()
+                ? 'true'
+                : 'false'
+            "
+            [attr.aria-describedby]="
+              atividadeForm.titulo().touched() && atividadeForm.titulo().errors().length
+                ? 'informativa-titulo-erro'
+                : null
+            "
+            class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          @if (atividadeForm.titulo().touched() && atividadeForm.titulo().errors().length) {
+            <p id="informativa-titulo-erro" class="mt-1 text-xs font-medium text-red-700">
+              {{ atividadeForm.titulo().errors()[0].message }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="informativa-publico" class="block text-sm font-medium text-slate-800">
+            Público-alvo <span aria-hidden="true" class="text-red-600">*</span>
+          </label>
+          <input
+            id="informativa-publico"
+            type="text"
+            [formField]="atividadeForm.publicoAlvo"
+            placeholder="Ex.: Comunidade externa, Graduação"
+            [attr.aria-invalid]="
+              atividadeForm.publicoAlvo().touched() && atividadeForm.publicoAlvo().invalid()
+                ? 'true'
+                : 'false'
+            "
+            [attr.aria-describedby]="
+              atividadeForm.publicoAlvo().touched() && atividadeForm.publicoAlvo().errors().length
+                ? 'informativa-publico-erro'
+                : null
+            "
+            class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          @if (
+            atividadeForm.publicoAlvo().touched() && atividadeForm.publicoAlvo().errors().length
+          ) {
+            <p id="informativa-publico-erro" class="mt-1 text-xs font-medium text-red-700">
+              {{ atividadeForm.publicoAlvo().errors()[0].message }}
+            </p>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label for="informativa-descricao" class="block text-sm font-medium text-slate-800">
+          Objetivo / descrição resumida (exibida no cartão)
+          <span aria-hidden="true" class="text-red-600">*</span>
+        </label>
+        <textarea
+          id="informativa-descricao"
+          rows="2"
+          [formField]="atividadeForm.descricao"
+          [attr.aria-invalid]="
+            atividadeForm.descricao().touched() && atividadeForm.descricao().invalid()
+              ? 'true'
+              : 'false'
+          "
+          [attr.aria-describedby]="
+            atividadeForm.descricao().touched() && atividadeForm.descricao().errors().length
+              ? 'informativa-descricao-erro'
+              : null
+          "
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        ></textarea>
+        @if (atividadeForm.descricao().touched() && atividadeForm.descricao().errors().length) {
+          <p id="informativa-descricao-erro" class="mt-1 text-xs font-medium text-red-700">
+            {{ atividadeForm.descricao().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="informativa-conteudo" class="block text-sm font-medium text-slate-800">
+          Conteúdo completo
+          @if (modelo().publicacaoPublica) {
+            <span aria-hidden="true" class="text-red-600">*</span>
+          }
+        </label>
+        <textarea
+          id="informativa-conteudo"
+          rows="5"
+          [formField]="atividadeForm.conteudo"
+          placeholder="Texto completo da cartilha, boletim ou ação informativa..."
+          [attr.aria-invalid]="
+            atividadeForm.conteudo().touched() && atividadeForm.conteudo().invalid()
+              ? 'true'
+              : 'false'
+          "
+          [attr.aria-describedby]="
+            atividadeForm.conteudo().touched() && atividadeForm.conteudo().errors().length
+              ? 'informativa-conteudo-erro'
+              : null
+          "
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        ></textarea>
+        @if (atividadeForm.conteudo().touched() && atividadeForm.conteudo().errors().length) {
+          <p id="informativa-conteudo-erro" class="mt-1 text-xs font-medium text-red-700">
+            {{ atividadeForm.conteudo().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <fieldset class="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        <legend class="px-1 text-sm font-medium text-slate-800">Visibilidade e Agenda</legend>
+        <label class="flex items-center gap-2.5 text-sm text-slate-800">
+          <input
+            id="informativa-publica"
+            type="checkbox"
+            [formField]="atividadeForm.publicacaoPublica"
+            class="size-4 rounded accent-teal-700"
+          />
+          <span>Publicar no catálogo público (requer conteúdo preenchido)</span>
+        </label>
+
+        <label class="flex items-center gap-2.5 text-sm text-slate-800">
+          <input
+            id="informativa-agenda"
+            type="checkbox"
+            [formField]="atividadeForm.agendaPesquisa"
+            class="size-4 rounded accent-teal-700"
+          />
+          <span>Incluir períodos de lançamento na agenda interna de pesquisa</span>
+        </label>
+      </fieldset>
+
+      <div class="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-4">
+        <a
+          routerLink="/private/informativas/atividades"
+          class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Cancelar
+        </a>
+        <button
+          type="submit"
+          [disabled]="facade.salvando()"
+          class="rounded-lg bg-teal-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {{
+            facade.salvando()
+              ? 'Salvando...'
+              : emEdicao()
+                ? 'Salvar alterações'
+                : 'Criar atividade'
+          }}
+        </button>
+      </div>
+    </form>
+
+    @if (emEdicao() && facade.atividadeAtual(); as atual) {
+      <app-informativas-periodos-manager
+        [atividadeId]="atual.id"
+        [periodos]="atual.periodos"
+      />
+    }
+  }
+
+  <app-confirm-dialog
+    [aberto]="confirmarExclusaoAberto()"
+    titulo="Excluir atividade informativa?"
+    mensagem="Esta ação removerá permanentemente a atividade informativa e todos os seus períodos."
+    textoConfirmar="Excluir atividade"
+    [processando]="facade.salvando()"
+    (confirmado)="confirmarExclusao()"
+    (cancelado)="confirmarExclusaoAberto.set(false)"
+  />
+</section>

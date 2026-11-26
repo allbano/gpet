@@ -1,0 +1,144 @@
+<section class="space-y-6">
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900">Agenda Interna de Atividades Formativas</h2>
+        <p class="mt-0.5 text-sm text-slate-600">
+          Ocorrências agendadas com <code>agenda_pesquisa = true</code> que se sobrepõem à janela
+          consultada.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        (click)="aplicarJanelaMock()"
+        class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-blue-100"
+      >
+        Semana do Mock (Dez/2026)
+      </button>
+    </div>
+
+    <form
+      (submit)="aplicarConsulta(); $event.preventDefault()"
+      novalidate
+      class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-4"
+    >
+      <div>
+        <label for="agenda-form-inicio" class="block text-sm font-medium text-slate-800">
+          Início da janela
+        </label>
+        <input
+          id="agenda-form-inicio"
+          type="datetime-local"
+          [formField]="filtroForm.inicioLocal"
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+      </div>
+
+      <div>
+        <label for="agenda-form-termino" class="block text-sm font-medium text-slate-800">
+          Término exclusivo
+        </label>
+        <input
+          id="agenda-form-termino"
+          type="datetime-local"
+          [formField]="filtroForm.terminoLocal"
+          [attr.aria-invalid]="
+            filtroForm.terminoLocal().touched() && filtroForm.terminoLocal().invalid()
+              ? 'true'
+              : 'false'
+          "
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+        @if (filtroForm.terminoLocal().touched() && filtroForm.terminoLocal().errors().length) {
+          <p class="mt-1 text-xs font-medium text-red-700">
+            {{ filtroForm.terminoLocal().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="agenda-form-fuso" class="block text-sm font-medium text-slate-800">Fuso</label>
+        <input
+          id="agenda-form-fuso"
+          type="text"
+          list="agenda-form-fusos"
+          [formField]="filtroForm.fuso"
+          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+        />
+        <datalist id="agenda-form-fusos">
+          @for (zona of fusosComuns; track zona) {
+            <option [value]="zona"></option>
+          }
+        </datalist>
+      </div>
+
+      <div class="flex items-end">
+        <button
+          type="submit"
+          [disabled]="facade.carregandoAgenda()"
+          class="w-full rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+        >
+          {{ facade.carregandoAgenda() ? 'Consultando...' : 'Consultar janela' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  @if (facade.erroAgenda(); as erro) {
+    <app-status-banner tipo="error" [mensagem]="erro.mensagem" />
+  }
+
+  @if (facade.carregandoAgenda() && ocorrenciasFormatadas().length === 0) {
+    <app-loading-skeleton [linhas]="4" rotulo="Consultando ocorrências da agenda..." />
+  } @else if (ocorrenciasFormatadas().length === 0) {
+    <app-empty-state
+      titulo="Nenhuma ocorrência no intervalo"
+      descricao="Ajuste a janela temporal ou habilite 'Incluir na agenda de pesquisa' nas atividades desejadas."
+    />
+  } @else {
+    <div class="space-y-3">
+      @for (item of ocorrenciasFormatadas(); track item.origem.periodo_id) {
+        <article
+          class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-900">
+                {{ item.origem.natureza }}
+              </span>
+              <app-meio-badge [meio]="item.origem.meio" />
+              <span class="text-xs text-slate-500">Público: {{ item.origem.publico_alvo }}</span>
+            </div>
+            <h3 class="text-base font-semibold text-slate-900">{{ item.origem.titulo }}</h3>
+            <p class="text-sm text-slate-600">{{ item.origem.descricao }}</p>
+          </div>
+
+          <div class="flex flex-col items-start gap-2 sm:items-end">
+            <div class="text-sm font-semibold text-slate-900">{{ item.data }}</div>
+            <div class="text-sm text-slate-700">{{ item.horario }} ({{ item.fuso }})</div>
+            <a
+              [routerLink]="['/private/formativas/atividades', item.origem.atividade_id]"
+              class="text-xs font-semibold text-blue-700 hover:underline"
+            >
+              Gerenciar atividade →
+            </a>
+          </div>
+        </article>
+      }
+    </div>
+
+    @if (facade.proximoCursorAgenda() !== null) {
+      <div class="flex justify-center">
+        <button
+          type="button"
+          [disabled]="facade.carregandoAgenda()"
+          (click)="facade.carregarMaisAgenda()"
+          class="rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          {{ facade.carregandoAgenda() ? 'Carregando...' : 'Carregar mais ocorrências' }}
+        </button>
+      </div>
+    }
+  }
+</section>
