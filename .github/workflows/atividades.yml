@@ -1,0 +1,54 @@
+name: Contratos das atividades
+on: [push, pull_request]
+jobs:
+  contrato:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dominio: [formativas, informativas]
+    defaults:
+      run:
+        working-directory: backend_atividades_${{ matrix.dominio }}
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: gpet
+          POSTGRES_DB: atividades
+          POSTGRES_PASSWORD: local
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U gpet -d atividades" --health-interval 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://gpet:local@127.0.0.1:5432/atividades
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --all --check
+      - run: cargo test --locked
+      - name: Verificar operações com e sem Swagger
+        shell: bash
+        run: |
+          dominio="${{ matrix.dominio }}"
+          pacote="backend_atividades_$dominio"
+          cargo build --locked -p "$pacote"
+          bin="target/debug/$pacote"
+          "$bin" mock
+          "$bin" openapi > "openapi-$dominio.json"
+          pipx run --spec openapi-spec-validator==0.7.2 openapi-spec-validator "openapi-$dominio.json"
+          for modo in padrao swagger; do
+            opcoes=()
+            if [[ "$modo" == swagger ]]; then
+              cargo build --locked -p "$pacote" --features swagger
+              opcoes+=(--swagger)
+            fi
+            "$bin" &
+            pid=$!
+            curl -fsS --retry 20 --retry-connrefused http://localhost:8080/ready
+            python3 tests/contrato.py http://localhost:8080 "openapi-$dominio.json" "${opcoes[@]}"
+            kill "$pid"
+            wait "$pid" || true
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-${{ matrix.dominio }}
+          path: backend_atividades_${{ matrix.dominio }}/openapi-*.json
