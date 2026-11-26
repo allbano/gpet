@@ -1,0 +1,365 @@
+@startuml classes_structs_backend_gpet
+title Diagrama de Classes (Structs, Enums e Traits) — Backend GPET (Rust)
+
+top to bottom direction
+scale 0.8
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName SansSerif
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 40
+
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #37474F
+  HeaderBackgroundColor #ECEFF1
+  ArrowColor #455A64
+}
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor #607D8B
+}
+skinparam legend {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+
+' =============================================================================
+' CRATE 1: api_gateway (Pingora)
+' =============================================================================
+package "api_gateway" as GwCrate <<crate : Pingora>> {
+
+  interface "pingora::ProxyHttp" as ProxyHttp << (T,#FFB74D) trait >> {
+    + {abstract} type CTX
+    + new_ctx(&self) : CTX
+    + request_filter(&self, session, ctx) : Result<bool>
+    + upstream_peer(&self, session, ctx) : Result<Box<HttpPeer>>
+    + upstream_request_filter(&self, session, req, ctx) : Result<()>
+    + upstream_response_filter(&self, session, res, ctx) : Result<()>
+    + fail_to_proxy(&self, session, err, ctx) : FailToProxy
+  }
+
+  struct GatewayGpet << (S,#81D4FA) struct >> {
+    - configuracao : ConfiguracaoGateway
+    - swagger_config : Arc<Config<'static>> [swagger]
+    --
+    + novo(configuracao : ConfiguracaoGateway) : Self
+    - endereco_modulo(&self, modulo : Modulo) : &str
+  }
+
+  struct ConfiguracaoGateway << (S,#81D4FA) struct >> {
+    + endereco_escuta : String
+    + destino_formativas : String
+    + destino_informativas : String
+    --
+    + padrao() : Self
+    + carregar_do_ambiente() : Self
+  }
+
+  struct ContextoRequisicao << (S,#81D4FA) struct >> {
+    - modulo : Option<Modulo>
+    - caminho_destino : Option<String>
+    - mapeamento_localizacao : Option<MapeamentoLocalizacao>
+  }
+
+  struct MapeamentoLocalizacao << (S,#81D4FA) struct >> {
+    + prefixo_interno : &'static str
+    + prefixo_externo : &'static str
+  }
+
+  struct DefinicaoRota << (S,#81D4FA) struct >> {
+    - segmentos : &'static [PadraoSegmento]
+    - metodos : &'static [&'static str]
+    - destino : DestinoRota
+  }
+
+  enum Modulo << (E,#A5D6A7) enum >> {
+    Formativas
+    Informativas
+    --
+    + nome(self) : &'static str
+    + prefixo_api(self) : &'static str
+  }
+
+  enum Visibilidade << (E,#A5D6A7) enum >> {
+    Public
+    Private
+    --
+    + prefixo_rota(self) : &'static str
+  }
+
+  enum AcaoRota << (E,#A5D6A7) enum >> {
+    SondaVivaGateway
+    SondaProntidaoGateway
+    Encaminhar { modulo, caminho_destino, mapeamento_localizacao }
+    RedirecionarSwaggerUi [swagger]
+    ServirArquivoSwagger { arquivo } [swagger]
+    ServirOpenApi { modulo, visibilidade } [swagger]
+  }
+
+  enum DecisaoRoteamento << (E,#A5D6A7) enum >> {
+    Atender(AcaoRota)
+    MetodoNaoPermitido { permitidos }
+    NaoEncontrada
+  }
+
+  enum PadraoSegmento << (E,#A5D6A7) enum >> {
+    Literal(&'static str)
+    Parametro
+  }
+
+  enum DestinoRota << (E,#A5D6A7) enum >> {
+    SondaVivaGateway
+    SondaProntidaoGateway
+    SondaModulo { modulo, caminho_interno }
+    ReescreverPrefixo { modulo, visibilidade }
+  }
+
+  GatewayGpet .up.|> ProxyHttp : impl
+  GatewayGpet *-- "1" ConfiguracaoGateway : possui
+  GatewayGpet ..> ContextoRequisicao : type CTX
+  GatewayGpet ..> DecisaoRoteamento : classifica via rotas
+  ContextoRequisicao o-- "0..1" Modulo
+  ContextoRequisicao o-- "0..1" MapeamentoLocalizacao
+  DecisaoRoteamento *-- "0..1" AcaoRota
+  AcaoRota o-- "0..1" Modulo
+  AcaoRota o-- "0..1" Visibilidade
+  AcaoRota o-- "0..1" MapeamentoLocalizacao
+  DefinicaoRota *-- "1..*" PadraoSegmento
+  DefinicaoRota *-- "1" DestinoRota
+  DestinoRota o-- "0..1" Modulo
+  DestinoRota o-- "0..1" Visibilidade
+}
+
+' =============================================================================
+' CRATES 2 & 3: backend_atividades_formativas & backend_atividades_informativas
+' =============================================================================
+package "Serviços de Atividades (Formativas & Informativas)" as BackCrates <<crates : Axum + SQLx + PostgreSQL 18>> {
+
+  package "dominio" as DomPkg <<mod>> {
+
+    struct AtividadeFormativa << (S,#81D4FA) struct : formativas >> {
+      - cadastro : Cadastro
+      --
+      + nova(cadastro : Cadastro) : Result<Self, &'static str>
+      + publicar(&mut self) : Result<(), &'static str>
+      + editar(self, e : Edicao) : Result<Self, &'static str>
+      + cadastro(&self) : &Cadastro
+    }
+
+    struct AtividadeInformativa << (S,#81D4FA) struct : informativas >> {
+      - cadastro : Cadastro
+      --
+      + nova(cadastro : Cadastro) : Result<Self, &'static str>
+      + publicar(&mut self) : Result<(), &'static str>
+      + editar(self, e : Edicao) : Result<Self, &'static str>
+      + cadastro(&self) : &Cadastro
+    }
+
+    struct Cadastro << (S,#81D4FA) struct >> {
+      + classificacao_id : Uuid
+      + meio : Meio
+      + titulo : String
+      + descricao : String
+      + conteudo : String
+      + publico_alvo : String
+      + carga_horaria_minutos : Option<i32>
+      + publicacao_publica : bool
+      + agenda_pesquisa : bool
+    }
+
+    struct Edicao << (S,#81D4FA) struct >> {
+      + classificacao_id : Option<Uuid>
+      + meio : Option<Meio>
+      + titulo : Option<String>
+      + descricao : Option<String>
+      + conteudo : Option<String>
+      + publico_alvo : Option<String>
+      + carga_horaria_minutos : Option<Option<i32>>
+      + publicacao_publica : Option<bool>
+      + agenda_pesquisa : Option<bool>
+    }
+
+    enum Meio << (E,#A5D6A7) enum >> {
+      Online
+      Presencial
+      Hibrido
+      Impresso
+    }
+
+    struct Periodo << (S,#81D4FA) struct >> {
+      + id : Uuid
+      + inicio : DateTime<Utc>
+      + termino : DateTime<Utc>
+      + fuso : String
+      --
+      + editar(self, edicao : EdicaoHorario) : Result<Horario, &'static str>
+    }
+
+    struct Horario << (S,#81D4FA) struct >> {
+      + inicio : DateTime<Utc>
+      + termino : DateTime<Utc>
+      + fuso : String
+      --
+      + validar(&self) : Result<(), &'static str>
+    }
+
+    struct EdicaoHorario << (S,#81D4FA) struct >> {
+      + inicio : Option<DateTime<Utc>>
+      + termino : Option<DateTime<Utc>>
+      + fuso : Option<String>
+    }
+
+    AtividadeFormativa *-- "1" Cadastro
+    AtividadeInformativa *-- "1" Cadastro
+    AtividadeFormativa ..> Edicao : PATCH
+    AtividadeInformativa ..> Edicao : PATCH
+    Cadastro *-- "1" Meio
+    Edicao o-- "0..1" Meio
+    Periodo ..> EdicaoHorario : consome self
+    Periodo ..> Horario : produz
+  }
+
+  package "aplicacao & http" as AppHttpPkg <<mods>> {
+
+    enum MudancaHorario << (E,#A5D6A7) enum >> {
+      Adicionar(Horario)
+      Editar(Uuid, EdicaoHorario)
+      Remover(Uuid)
+    }
+
+    struct Identificador << (S,#81D4FA) struct : http >> {
+      - id : Uuid
+    }
+
+    struct Nome << (S,#81D4FA) struct : http >> {
+      - nome : String
+    }
+
+    MudancaHorario o-- "0..1" Horario
+    MudancaHorario o-- "0..1" EdicaoHorario
+  }
+
+  package "consultas" as ConsPkg <<mod : projeções CQRS>> {
+
+    struct Classificacao << (S,#81D4FA) struct >> {
+      + id : Uuid
+      + nome : String
+    }
+
+    struct Cartao << (S,#81D4FA) struct >> {
+      + id : Uuid
+      + titulo : String
+      + descricao : String
+      + meio : Meio
+      + classificacao_id : Uuid
+      + classificacao : String
+      + created_at : DateTime<Utc> [serde(skip)]
+    }
+
+    struct Detalhe << (S,#81D4FA) struct >> {
+      + id : Uuid
+      + classificacao : String
+      + cadastro : Cadastro [flatten]
+      + periodos : Vec<Periodo> [sqlx(json)]
+    }
+
+    struct Ocorrencia << (S,#81D4FA) struct >> {
+      + atividade_id : Uuid
+      + periodo_id : Uuid
+      + titulo : String
+      + descricao : String
+      + natureza : String
+      + meio : Meio
+      + publico_alvo : String
+      + inicio : DateTime<Utc>
+      + termino : DateTime<Utc>
+      + fuso : String
+    }
+
+    struct Paginacao << (S,#81D4FA) struct >> {
+      + limite : Option<i64>
+      + cursor : Option<String>
+      --
+      - limite(&self) : Result<i64, Erro>
+      - posicao(&self) : Result<Option<(DateTime<Utc>, Uuid)>, Erro>
+    }
+
+    struct Janela << (S,#81D4FA) struct >> {
+      + inicio : DateTime<Utc>
+      + termino : DateTime<Utc>
+      + limite : Option<i64>
+      + cursor : Option<String>
+    }
+
+    struct "Pagina<T>" as Pagina << (S,#81D4FA) struct >> {
+      + itens : Vec<T>
+      + proximo_cursor : Option<String>
+    }
+
+    Detalhe *-[norank]- "1" Cadastro
+    Detalhe *-[norank]- "0..*" Periodo
+    Cartao *-[norank]- "1" Meio
+    Ocorrencia *-[norank]- "1" Meio
+    Janela ..> Paginacao : reutiliza validação
+    Pagina ..> Cartao : T = Cartao
+    Pagina ..> Ocorrencia : T = Ocorrencia
+  }
+
+  package "erro" as ErrPkg <<mod>> {
+
+    interface "axum::IntoResponse" as IntoResponse << (T,#FFB74D) trait >> {
+      + into_response(self) : Response
+    }
+
+    interface "std::convert::From<T>" as FromTrait << (T,#FFB74D) trait >> {
+      + from(valor : T) : Self
+    }
+
+    enum Erro << (E,#A5D6A7) enum >> {
+      Parametro(&'static str)
+      Regra(&'static str)
+      Ausente
+      Conflito
+      Interno
+      Indisponivel
+    }
+
+    struct Mensagem << (S,#81D4FA) struct >> {
+      - mensagem : &'static str
+    }
+
+    Erro ..|> IntoResponse : impl
+    Erro ..|> FromTrait : From<&str> /\nFrom<sqlx::Error>
+    Erro ..> Mensagem : JSON
+    Paginacao .left.> Erro : Parametro
+  }
+
+  ' Alinha a primeira linha de consultas abaixo de Meio, no fim de dominio.
+  Meio -[hidden]down-> Classificacao
+  AppHttpPkg -[hidden]down- ErrPkg
+}
+
+' Força empilhamento vertical: api_gateway em cima, Serviços de Atividades abaixo
+GwCrate ..down..> BackCrates : encaminha HTTP\n(Modulo::Formativas / Informativas)
+Modulo -[hidden]down-> AtividadeFormativa
+Visibilidade -[hidden]down-> AtividadeInformativa
+MapeamentoLocalizacao -[hidden]down-> MudancaHorario
+PadraoSegmento -[hidden]down-> Identificador
+
+legend top right
+  <b>Adaptação para Rust (sem classes OOP nem herança):</b>
+  • <b>Structs</b> (""S"") concentram dados; comportamentos ficam em blocos ""impl"" explícitos
+    (ex.: ""AtividadeFormativa"", ""AtividadeInformativa"", ""Periodo"", ""Horario"", ""Paginacao"").
+  • <b>Enums algébricos</b> (""E"") modelam variantes com dados associados
+    (""MudancaHorario"", ""Erro"", ""AcaoRota"", ""DecisaoRoteamento"").
+  • <b>Traits</b> (""T"") substituem interfaces/herança (""ProxyHttp"", ""IntoResponse"", ""From<T>"",
+    além dos ""#[derive]"" como ""Serialize"", ""Deserialize"", ""FromRow"", ""ToSchema"").
+  • Os dois serviços de backend são crates independentes com estrutura isomórfica,
+    diferenciando-se pela struct de domínio (""AtividadeFormativa"" vs ""AtividadeInformativa"")
+    e pela rota de classificação (""/tipos-atividade"" vs ""/modalidades"").
+endlegend
+
+@enduml
